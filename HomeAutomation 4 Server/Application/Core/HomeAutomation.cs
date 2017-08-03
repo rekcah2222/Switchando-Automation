@@ -27,16 +27,18 @@ namespace HomeAutomationCore
         public TelegramBot Telegram { get; set; }
 
         public string House;
+        public string Password;
 
-        public HomeAutomationServer(string House)
+        public HomeAutomationServer(string house, string password)
         {
             server = this;
-            this.House = House;
+            this.House = house;
+            this.Password = password;
 
             Clients = new List<Client.Client>();
             Objects = new List<IObject>();
             Rooms = new List<Room>();
-            Telegram = new TelegramBot(null);
+            //Telegram = new TelegramBot(null);
 
             NetworkInterfaces = new List<NetworkInterface>();
         }

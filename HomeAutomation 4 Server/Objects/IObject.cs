@@ -21,6 +21,7 @@ namespace HomeAutomation.Objects
         GENERIC_SWITCH,
         ROOM,
         BUTTON,
-        SWITCH_BUTTON
+        SWITCH_BUTTON,
+        EXTERNAL_SWITCH
     }
 }

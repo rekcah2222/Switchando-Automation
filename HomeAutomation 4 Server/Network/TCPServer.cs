@@ -45,6 +45,8 @@ namespace HomeAutomation.Network
                     if (message == null) break;
                     Console.WriteLine("TCP message from a client -> " + message);
 
+                    if (!message.Contains("&password=" + HomeAutomationServer.server.Password)) return;
+
                     string[] commands = message.Split('&');
 
                     if (message.StartsWith("client-handshake="))

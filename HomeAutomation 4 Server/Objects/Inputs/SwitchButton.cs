@@ -18,6 +18,7 @@ namespace HomeAutomation.Objects.Inputs
 
         public uint Pin;
         bool Status;
+        bool IsRemote;
 
         Timer timer;
 
@@ -27,28 +28,45 @@ namespace HomeAutomation.Objects.Inputs
         public List<string> Objects;
 
         public HomeAutomationObject ObjectType = HomeAutomationObject.SWITCH_BUTTON;
-        public SwitchButton(Client client, string name, uint pin)
+        public SwitchButton(Client client, string name, bool isRemote)
+        {
+            new SwitchButton(client, name, 0, IsRemote);
+        }
+        public SwitchButton(Client client, string name, uint pin, bool isRemote)
         {
             this.Client = client;
             this.ClientName = client.Name;
             this.Pin = pin;
             this.Name = name;
+            this.IsRemote = isRemote;
 
             this.CommandsOn = new List<string>();
             this.CommandsOff = new List<string>();
             this.Objects = new List<string>();
 
-            if (Client.Name.Equals("local"))
+            if (!isRemote)
             {
-                PIGPIO.set_pull_up_down(0, this.Pin, 2);
-                Console.WriteLine("PUD-UP was set on GPIO" + this.Pin);
+                if (Client.Name.Equals("local"))
+                {
+                    PIGPIO.set_pull_up_down(0, this.Pin, 2);
+                    Console.WriteLine("PUD-UP was set on GPIO" + this.Pin);
 
-                timer = new Timer();
+                    timer = new Timer();
 
-                timer.Elapsed += Tick;
-                timer.Interval = 200;
-                timer.Start();
+                    timer.Elapsed += Tick;
+                    timer.Interval = 200;
+                    timer.Start();
+                }
             }
+
+            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
+            {
+                if (netInt.Id.Equals("switch_button")) return;
+            }
+            NetworkInterface.Delegate requestHandler;
+            requestHandler = SendParameters;
+            NetworkInterface networkInterface = new NetworkInterface("switch_button", requestHandler);
+
             HomeAutomationServer.server.Objects.Add(this);
         }
         public void SetClient(Client client)
@@ -107,14 +125,14 @@ namespace HomeAutomation.Objects.Inputs
             else
             {
                 this.Status = lStatus;
-                StatusChanged();
+                StatusChanged(lStatus);
             }
         }
-        void StatusChanged()
+        public void StatusChanged(bool value)
         {
             Console.WriteLine(this.Name + " status: " + this.Status);
             HomeAutomationServer.server.Telegram.Log("Button `" + this.Name + "`'s status: " + this.Status + ".");
-            if (Status)
+            if (value)
             {
                 foreach (string command in CommandsOn)
                 {
@@ -196,6 +214,42 @@ namespace HomeAutomation.Objects.Inputs
         public string[] GetFriendlyNames()
         {
             return new string[0];
+        }
+        public static void SendParameters(string[] request)
+        {
+            SwitchButton button = null;
+            foreach (string cmd in request)
+            {
+                string[] command = cmd.Split('=');
+                if (command[0].Equals("interface")) continue;
+                switch (command[0])
+                {
+                    case "objname":
+                        foreach (IObject obj in HomeAutomationServer.server.Objects)
+                        {
+                            if (obj.GetName().Equals(command[1]))
+                            {
+                                button = (SwitchButton)obj;
+                            }
+                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                            {
+                                button = (SwitchButton)obj;
+                            }
+                        }
+                        break;
+
+                    case "switch":
+                        if (command[1].ToLower().Equals("true"))
+                        {
+                            button.StatusChanged(true);
+                        }
+                        else
+                        {
+                            button.StatusChanged(false);
+                        }
+                        break;
+                }
+            }
         }
     }
 }

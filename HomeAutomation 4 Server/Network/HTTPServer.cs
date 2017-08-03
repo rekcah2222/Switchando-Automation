@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Threading;
-using System.Linq;
 using System.Text;
 
 namespace HomeAutomation.Network
@@ -13,6 +12,7 @@ namespace HomeAutomation.Network
 
         public HttpServer(string[] prefixes, Func<HttpListenerRequest, string> method)
         {
+           
             if (!HttpListener.IsSupported)
                 throw new NotSupportedException(
                     "Needs Windows XP SP2, Server 2003 or later.");
@@ -55,6 +55,7 @@ namespace HomeAutomation.Network
                                 byte[] buf = Encoding.UTF8.GetBytes(rstr);
                                 ctx.Response.ContentLength64 = buf.Length;
                                 ctx.Response.OutputStream.Write(buf, 0, buf.Length);
+
                             }
                             catch(Exception e)
                             {

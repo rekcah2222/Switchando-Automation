@@ -95,7 +95,7 @@ namespace HomeAutomation.Objects.Lights
         public void Set(uint ValueR, uint ValueG, uint ValueB, int DimmerIntervals, bool nolog = false)
         {
             Console.WriteLine("Changing color of " + this.Name + " with a dimmer of " + DimmerIntervals + "ms.");
-            if (!nolog) HomeAutomationServer.server.Telegram.Log("Changing color of " + this.Name + " with a dimmer of " + DimmerIntervals + "ms.");
+            //if (!nolog) HomeAutomationServer.server.Telegram.Log("Changing color of " + this.Name + " with a dimmer of " + DimmerIntervals + "ms.");
             this.Brightness = 100;
             if (ValueR == this.ValueR && ValueG == this.ValueG && ValueB == this.ValueB)
             {
@@ -298,7 +298,7 @@ namespace HomeAutomation.Objects.Lights
         {
             return LightType.RGB_LIGHT;
         }
-        public new HomeAutomationObject GetObjectType()
+        public HomeAutomationObject GetObjectType()
         {
             return HomeAutomationObject.LIGHT;
         }

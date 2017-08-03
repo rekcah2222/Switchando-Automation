@@ -19,6 +19,7 @@ namespace HomeAutomation.Objects.Inputs
         public uint Pin;
         bool Status;
         bool EmulatedSwitchStatus;
+        bool IsRemote;
 
         Timer timer;
 
@@ -26,34 +27,54 @@ namespace HomeAutomation.Objects.Inputs
         public List<string> Objects;
 
         public HomeAutomationObject ObjectType = HomeAutomationObject.BUTTON;
-        public Button(Client client, string name, uint pin)
+        public Button(Client client, string name, bool isRemote)
+        {
+            new Button(client, name, 0, isRemote);
+        }
+        public Button(Client client, string name, uint pin, bool isRemote)
         {
             this.Client = client;
             this.ClientName = client.Name;
             this.Pin = pin;
             this.Name = name;
+            this.IsRemote = isRemote;
 
             this.Commands = new List<string>();
             this.Objects = new List<string>();
 
-            if (Client.Name.Equals("local"))
+            if (isRemote)
             {
-                PIGPIO.set_pull_up_down(0, this.Pin, 2);
-                Console.WriteLine("PUD-UP was set on GPIO" + this.Pin);
 
-                timer = new Timer();
-
-                timer.Elapsed += Tick;
-                timer.Interval = 200;
-                timer.Start();
             }
+            else
+            {
+                if (Client.Name.Equals("local"))
+                {
+                    PIGPIO.set_pull_up_down(0, this.Pin, 2);
+                    Console.WriteLine("PUD-UP was set on GPIO" + this.Pin);
+
+                    timer = new Timer();
+
+                    timer.Elapsed += Tick;
+                    timer.Interval = 200;
+                    timer.Start();
+                }
+            }
+
+            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
+            {
+                if (netInt.Id.Equals("button")) return;
+            }
+            NetworkInterface.Delegate requestHandler;
+            requestHandler = SendParameters;
+            NetworkInterface networkInterface = new NetworkInterface("button", requestHandler);
+
             HomeAutomationServer.server.Objects.Add(this);
         }
         public void SetClient(Client client)
         {
             this.Client = client;
         }
-
 
         public void AddCommand(string command)
         {
@@ -93,13 +114,13 @@ namespace HomeAutomation.Objects.Inputs
             else
             {
                 this.Status = lStatus;
-                StatusChanged();
+                StatusChanged(lStatus);
             }
         }
-        void StatusChanged()
+        public void StatusChanged(bool value)
         {
             Console.WriteLine(this.Name + " status: " + this.Status);
-            if (Status)
+            if (value)
             {
                 HomeAutomationServer.server.Telegram.Log("Button `" + this.Name + "` has been pressed.");
                 if (EmulatedSwitchStatus) EmulatedSwitchStatus = false; else EmulatedSwitchStatus = true;
@@ -176,6 +197,35 @@ namespace HomeAutomation.Objects.Inputs
         public string[] GetFriendlyNames()
         {
             return new string[0];
+        }
+        public static void SendParameters(string[] request)
+        {
+            Button button = null;
+            foreach (string cmd in request)
+            {
+                string[] command = cmd.Split('=');
+                if (command[0].Equals("interface")) continue;
+                switch (command[0])
+                {
+                    case "objname":
+                        foreach (IObject obj in HomeAutomationServer.server.Objects)
+                        {
+                            if (obj.GetName().Equals(command[1]))
+                            {
+                                button = (Button)obj;
+                            }
+                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                            {
+                                button = (Button)obj;
+                            }
+                        }
+                        break;
+
+                    case "switch":
+                        button.StatusChanged(true);
+                        break;
+                }
+            }
         }
     }
 }

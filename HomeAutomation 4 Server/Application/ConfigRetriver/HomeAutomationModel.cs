@@ -12,10 +12,15 @@ namespace HomeAutomation.ConfigRetriver
         public string Name;
         public string[] FriendlyNames;
         public string Description;
+        public string ID;
 
         public uint Pin;
         public uint Value;
         public uint PauseValue;
+
+        public bool IsRemote;
+        public bool Online;
+
 
         public HomeAutomationObject ObjectType;
         public LightType LightType;

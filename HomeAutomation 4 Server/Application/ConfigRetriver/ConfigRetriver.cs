@@ -1,5 +1,6 @@
 ﻿using HomeAutomation.Network;
 using HomeAutomation.Objects;
+using HomeAutomation.Objects.External;
 using HomeAutomation.Objects.Fans;
 using HomeAutomation.Objects.Inputs;
 using HomeAutomation.Objects.Lights;
@@ -70,6 +71,10 @@ namespace HomeAutomation.ConfigRetriver
 
                     case "addrelay":
                         CreateRelay(request);
+                        break;
+
+                    case "addwebrelay":
+                        CreateWebRelay(request);
                         break;
 
                     case "addbutton":
@@ -428,6 +433,49 @@ namespace HomeAutomation.ConfigRetriver
             Relay relay = new Relay(client, name, pin, description, friendlyNames);
             room.AddItem(relay);
         }
+        private void CreateWebRelay(string[] data)
+        {
+            string name = null;
+            string id = null;
+            string[] friendlyNames = null;
+            string description = null;
+
+            Room room = null;
+
+            foreach (string cmd in data)
+            {
+                string[] command = cmd.Split('=');
+                if (command[0].Equals("interface")) continue;
+                switch (command[0])
+                {
+                    case "addwebrelay":
+                        name = command[1];
+                        break;
+                    case "id":
+                        id = command[1];
+                        break;
+                    case "description":
+                        description = command[1];
+                        break;
+                    case "setfriendlynames":
+                        string names = command[1];
+                        friendlyNames = names.Split(',');
+                        break;
+                    case "room":
+                        foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                        {
+                            if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                            {
+                                room = stanza;
+                            }
+                        }
+                        break;
+                }
+            }
+            if (room == null) return;
+            WebRelay relay = new WebRelay(name, id, description, friendlyNames);
+            room.AddItem(relay);
+        }
         private void CreateSimpleFan(string[] data)
         {
             string name = null;
@@ -494,6 +542,7 @@ namespace HomeAutomation.ConfigRetriver
             string name = null;
             uint pin = 0;
             Client client = null;
+            bool isRemote = false;
 
             Room room = null;
 
@@ -533,10 +582,14 @@ namespace HomeAutomation.ConfigRetriver
                             }
                         }
                         break;
+
+                    case "remote":
+                        isRemote = bool.Parse(command[1]);
+                        break;
                 }
             }
             if (room == null) return;
-            Button button = new Button(client, name, pin);
+            Button button = new Button(client, name, pin, isRemote);
             room.AddItem(button);
         }
         private void CreateSwitchButton(string[] data)
@@ -544,6 +597,7 @@ namespace HomeAutomation.ConfigRetriver
             string name = null;
             uint pin = 0;
             Client client = null;
+            bool isRemote = false;
 
             Room room = null;
 
@@ -583,10 +637,14 @@ namespace HomeAutomation.ConfigRetriver
                             }
                         }
                         break;
+
+                    case "remote":
+                        isRemote = bool.Parse(command[1]);
+                        break;
                 }
             }
             if (room == null) return;
-            SwitchButton button = new SwitchButton(client, name, pin);
+            SwitchButton button = new SwitchButton(client, name, pin, isRemote);
             room.AddItem(button);
         }
         private void SwitchButtonAddCommand(string[] data)

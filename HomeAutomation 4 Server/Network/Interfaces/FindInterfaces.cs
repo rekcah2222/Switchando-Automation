@@ -45,6 +45,7 @@ namespace HomeAutomation.Network.Objects
                             {
                                 obj.GetInterface().Run(request);
                             }
+                            if (obj.GetFriendlyNames() == null) continue;
                             if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
                             {
                                 obj.GetInterface().Run(request);
