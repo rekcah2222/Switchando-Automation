@@ -1,14 +1,11 @@
 ﻿using HomeAutomation.Network;
 using HomeAutomation.Objects.Inputs;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HomeAutomation.Objects.External
 {
@@ -55,8 +52,17 @@ namespace HomeAutomation.Objects.External
         {
             Console.WriteLine("Switch `" + this.Name + "` has been turned on.");
             //HomeAutomationServer.server.Telegram.Log("Switch `" + this.Name + "` has been turned on.");
-
-            new WebClient().UploadString("http://" + Address + "/HomeAutomation/" + ID + "/on", "");
+            if (Online)
+            {
+                try
+                {
+                    new WebClient().UploadString("http://" + Address + "/HomeAutomation/" + ID + "/on", "");
+                }
+                catch
+                {
+                    Online = false;
+                }
+            }
 
             Enabled = true;
         }
@@ -65,27 +71,41 @@ namespace HomeAutomation.Objects.External
             Console.WriteLine("Switch `" + this.Name + "` has been turned off.");
             //HomeAutomationServer.server.Telegram.Log("Switch `" + this.Name + "` has been turned off.");
 
-            new WebClient().UploadString("http://" + Address + "/HomeAutomation/" + ID + "/off", "");
+            if (Online)
+            {
+                try
+                {
+                    new WebClient().UploadString("http://" + Address + "/HomeAutomation/" + ID + "/off", "");
+                }
+                catch
+                {
+                    Online = false;
+                }
+            }
 
             Enabled = false;
         }
-        public void AddButton()
+        public void AddButton(Room room)
         {
             Client client = null;
             foreach (Client clnt in HomeAutomationServer.server.Clients)
             {
-                if (client.Name.Equals("local")) client = clnt;
+                if (clnt.Name.Equals("local")) client = clnt;
             }
-            new Button(client, ID + "_btn", true);
+            Button btn = new Button(client, ID + "_btn", true);
+            btn.AddObject(this);
+            room.AddItem(btn);
         }
-        public void AddSwitchButton()
+        public void AddSwitchButton(Room room)
         {
             Client client = null;
             foreach (Client clnt in HomeAutomationServer.server.Clients)
             {
                 if (client.Name.Equals("local")) client = clnt;
             }
-            new SwitchButton(client, ID + "_swbtn", true);
+            SwitchButton btn = new SwitchButton(client, ID + "_swbtn", true);
+            btn.AddObject(this);
+            room.AddItem(btn);
         }
         public bool IsOn()
         {
@@ -143,6 +163,7 @@ namespace HomeAutomation.Objects.External
                             {
                                 webrelay = (WebRelay)obj;
                             }
+                            if (obj.GetFriendlyNames() == null) continue;
                             if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
                             {
                                 webrelay = (WebRelay)obj;
@@ -158,16 +179,6 @@ namespace HomeAutomation.Objects.External
                         else
                         {
                             webrelay.Stop();
-                        }
-                        break;
-                    case "addButton":
-                        if (command[1].ToLower().Equals("button"))
-                        {
-                            webrelay.AddButton();
-                        }
-                        else if (command[1].ToLower().Equals("switch_button"))
-                        {
-                            webrelay.AddSwitchButton();
                         }
                         break;
                 }

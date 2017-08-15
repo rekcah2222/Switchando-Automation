@@ -73,7 +73,7 @@ namespace HomeAutomation.Objects.Lights
         public void Set(uint value, int dimmer, bool nolog = false)
         {
             Console.WriteLine("Setting " + this.Name + " from " + this.Value + " to " + value + " with a dimmer of " + dimmer + "ms.");
-            if (!nolog) HomeAutomationServer.server.Telegram.Log("Setting " + this.Name + " from " + this.Value + " to " + value + " with a dimmer of " + dimmer + "ms.");
+            //if (!nolog) HomeAutomationServer.server.Telegram.Log("Setting " + this.Name + " from " + this.Value + " to " + value + " with a dimmer of " + dimmer + "ms.");
             this.Brightness = 100;
             if (value == this.Value) return;
 
@@ -277,6 +277,7 @@ namespace HomeAutomation.Objects.Lights
                             {
                                 light = (WLight)obj;
                             }
+                            if (obj.GetFriendlyNames() == null) continue;
                             if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
                             {
                                 light = (WLight)obj;

@@ -31,7 +31,7 @@ namespace HomeAutomation.ConfigRetriver
             requestHandler = SendParameters;
             NetworkInterface networkInterface = new NetworkInterface("configuration", requestHandler);
         }
-        public void SendParameters(string[] request)
+        public static void SendParameters(string[] request)
         {
             foreach (string cmd in request)
             {
@@ -106,7 +106,7 @@ namespace HomeAutomation.ConfigRetriver
             string json = JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms);
             File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json", json);
         }
-        private void CreateClient(string[] data)
+        private static void CreateClient(string[] data)
         {
             string name = null;
 
@@ -128,7 +128,7 @@ namespace HomeAutomation.ConfigRetriver
             }
             new Client(null, 0, name);
         }
-        private void RemoveRoom(string[] data)
+        private static void RemoveRoom(string[] data)
         {
             string name = null;
 
@@ -152,7 +152,7 @@ namespace HomeAutomation.ConfigRetriver
                 }
             }
         }
-        private void RemoveObject(string[] data)
+        private static void RemoveObject(string[] data)
         {
             string name = null;
 
@@ -187,7 +187,7 @@ namespace HomeAutomation.ConfigRetriver
                 }
             }
         }
-        private void RemoveClient(string[] data)
+        private static void RemoveClient(string[] data)
         {
             string name = null;
 
@@ -211,7 +211,7 @@ namespace HomeAutomation.ConfigRetriver
                 }
             }
         }
-        private void CreateRoom(string[] data)
+        private static void CreateRoom(string[] data)
         {
             string name = null;
             bool hiddenRoom = false;
@@ -240,7 +240,7 @@ namespace HomeAutomation.ConfigRetriver
             }
             Room room = new Room(name, friendlyNames, hiddenRoom);
         }
-        private void CreateLightRGB(string[] data)
+        private static void CreateLightRGB(string[] data)
         {
             string name = null;
             string[] friendlyNames = null;
@@ -311,7 +311,7 @@ namespace HomeAutomation.ConfigRetriver
             RGBLight light = new RGBLight(client, name, pinR, pinG, pinB, description, friendlyNames);
             room.AddItem(light);
         }
-        private void CreateLightW(string[] data)
+        private static void CreateLightW(string[] data)
         {
             string name = null;
             string[] friendlyNames = null;
@@ -372,7 +372,7 @@ namespace HomeAutomation.ConfigRetriver
             WLight light = new WLight(client, name, pin, description, friendlyNames);
             room.AddItem(light);
         }
-        private void CreateRelay(string[] data)
+        private static void CreateRelay(string[] data)
         {
             string name = null;
             string[] friendlyNames = null;
@@ -433,12 +433,13 @@ namespace HomeAutomation.ConfigRetriver
             Relay relay = new Relay(client, name, pin, description, friendlyNames);
             room.AddItem(relay);
         }
-        private void CreateWebRelay(string[] data)
+        private static void CreateWebRelay(string[] data)
         {
             string name = null;
             string id = null;
             string[] friendlyNames = null;
             string description = null;
+            string createButton = "none";
 
             Room room = null;
 
@@ -470,13 +471,24 @@ namespace HomeAutomation.ConfigRetriver
                             }
                         }
                         break;
+                    case "createbutton":
+                        createButton = command[1];
+                        break;
                 }
             }
             if (room == null) return;
             WebRelay relay = new WebRelay(name, id, description, friendlyNames);
             room.AddItem(relay);
+            if (createButton.Equals("button"))
+            {
+                relay.AddButton(room);
+            }
+            else if (createButton.Equals("switch_button"))
+            {
+                relay.AddSwitchButton(room);
+            }
         }
-        private void CreateSimpleFan(string[] data)
+        private static void CreateSimpleFan(string[] data)
         {
             string name = null;
             string[] friendlyNames = null;
@@ -537,7 +549,7 @@ namespace HomeAutomation.ConfigRetriver
             SimpleFan relay = new SimpleFan(client, name, pin, description, friendlyNames);
             room.AddItem(relay);
         }
-        private void CreateButton(string[] data)
+        private static void CreateButton(string[] data)
         {
             string name = null;
             uint pin = 0;
@@ -592,7 +604,7 @@ namespace HomeAutomation.ConfigRetriver
             Button button = new Button(client, name, pin, isRemote);
             room.AddItem(button);
         }
-        private void CreateSwitchButton(string[] data)
+        private static void CreateSwitchButton(string[] data)
         {
             string name = null;
             uint pin = 0;
@@ -647,7 +659,7 @@ namespace HomeAutomation.ConfigRetriver
             SwitchButton button = new SwitchButton(client, name, pin, isRemote);
             room.AddItem(button);
         }
-        private void SwitchButtonAddCommand(string[] data)
+        private static void SwitchButtonAddCommand(string[] data)
         {
             string name = null;
             bool type = false;
@@ -689,7 +701,7 @@ namespace HomeAutomation.ConfigRetriver
                 }
             }
         }
-        private void ButtonAddCommand(string[] data)
+        private static void ButtonAddCommand(string[] data)
         {
             string name = null;
             string newCmd = null;
@@ -722,7 +734,7 @@ namespace HomeAutomation.ConfigRetriver
                 }
             }
         }
-        private void ButtonAddObject(string[] data)
+        private static void ButtonAddObject(string[] data)
         {
             string name = null;
             string obj = null;
@@ -770,7 +782,7 @@ namespace HomeAutomation.ConfigRetriver
 
             button.AddObject(switchable);
         }
-        private void SwitchButtonAddObject(string[] data)
+        private static void SwitchButtonAddObject(string[] data)
         {
             string name = null;
             string obj = null;

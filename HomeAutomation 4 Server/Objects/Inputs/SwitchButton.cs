@@ -231,10 +231,6 @@ namespace HomeAutomation.Objects.Inputs
                             {
                                 button = (SwitchButton)obj;
                             }
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                            {
-                                button = (SwitchButton)obj;
-                            }
                         }
                         break;
 

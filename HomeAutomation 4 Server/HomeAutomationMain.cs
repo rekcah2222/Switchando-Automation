@@ -34,7 +34,7 @@ namespace HomeAutomationCore
 
             //string jsonned = "[{\"Name\":\"Salotto\",\"FriendlyNames\":[\"living room\"],\"Objects\":[{\"ClientName\":\"livingroom\",\"PinR\":20,\"PinG\":26,\"PinB\":19,\"ValueR\":255,\"ValueG\":255,\"ValueB\":255,\"Brightness\":100,\"Switch\":true,\"Name\":\"Retroilluminazione sul mobile\",\"FriendlyNames\":[\"living room led\",\"living room's led\"],\"Description\":\"Striscia LED RGB dietro al mobile del salone\",\"nolog\":false,\"ObjectType\":0,\"LightType\":0},{\"ClientName\":\"livingroom\",\"Pin\":21,\"Value\":255,\"Brightness\":100,\"PauseValue\":0,\"Switch\":true,\"Name\":\"Faretti sul mobile\",\"FriendlyNames\":[\"living room's spotlight\",\"living room spotlight\"],\"Description\":\"Faretti sul mobile del salone\",\"ObjectType\":0,\"LightType\":1}],\"Hidden\":false},{\"Name\":\"Stanza di Marco\",\"FriendlyNames\":[\"marco's room\",\"marcos room\",\"marco's room devices\"],\"Objects\":[{\"ClientName\":\"marcoroom\",\"Name\":\"button 1\",\"Pin\":12,\"Commands\":[\"interface,,light_w,,,objname,,Striscia a led bianca,,,switch,,%EmulatedSwitchStatus%\",\"interface,,light_rgb,,,objname,,LED RGB,,,switch,,%EmulatedSwitchStatus%\"],\"ObjectType\":4},{\"ClientName\":\"marcoroom\",\"PinR\":20,\"PinG\":16,\"PinB\":21,\"ValueR\":255,\"ValueG\":255,\"ValueB\":255,\"Brightness\":100,\"Switch\":true,\"Name\":\"LED RGB\",\"FriendlyNames\":[\"led di marco\",\"luci di marco\",\"marco's color light\"],\"Description\":\"Striscia LED RGB\",\"nolog\":false,\"ObjectType\":0,\"LightType\":0},{\"ClientName\":\"marcoroom\",\"Pin\":26,\"Value\":255,\"Brightness\":100,\"PauseValue\":0,\"Switch\":true,\"Name\":\"Striscia a led bianca\",\"FriendlyNames\":[\"marco's light\"],\"Description\":\"Illuminazione a led della stanza di Marco\",\"ObjectType\":0,\"LightType\":1}],\"Hidden\":false},{\"Name\":\"all_lights\",\"FriendlyNames\":[\"all lights\",\"house lights\",\"house's lights\"],\"Objects\":[{\"ClientName\":\"livingroom\",\"PinR\":20,\"PinG\":26,\"PinB\":19,\"ValueR\":255,\"ValueG\":255,\"ValueB\":255,\"Brightness\":100,\"Switch\":true,\"Name\":\"Retroilluminazione sul mobile\",\"FriendlyNames\":[\"living room led\",\"living room's led\"],\"Description\":\"Striscia LED RGB dietro al mobile del salone\",\"nolog\":false,\"ObjectType\":0,\"LightType\":0},{\"ClientName\":\"livingroom\",\"Pin\":21,\"Value\":255,\"Brightness\":100,\"PauseValue\":0,\"Switch\":true,\"Name\":\"Faretti sul mobile\",\"FriendlyNames\":[\"living room's spotlight\",\"living room spotlight\"],\"Description\":\"Faretti sul mobile del salone\",\"ObjectType\":0,\"LightType\":1},{\"ClientName\":\"marcoroom\",\"PinR\":20,\"PinG\":16,\"PinB\":21,\"ValueR\":255,\"ValueG\":255,\"ValueB\":255,\"Brightness\":100,\"Switch\":true,\"Name\":\"LED RGB\",\"FriendlyNames\":[\"led di marco\",\"luci di marco\",\"marco's color light\"],\"Description\":\"Striscia LED RGB\",\"nolog\":false,\"ObjectType\":0,\"LightType\":0},{\"ClientName\":\"marcoroom\",\"Pin\":26,\"Value\":255,\"Brightness\":100,\"PauseValue\":0,\"Switch\":true,\"Name\":\"Striscia a led bianca\",\"FriendlyNames\":[\"marco's light\"],\"Description\":\"Illuminazione a led della stanza di Marco\",\"ObjectType\":0,\"LightType\":1}],\"Hidden\":true},{\"Name\":\"Marco's lights\",\"FriendlyNames\":[\"marco's room lights\",\"lights in marco's room\",\"marcos room lights\"],\"Objects\":[{\"ClientName\":\"marcoroom\",\"PinR\":20,\"PinG\":16,\"PinB\":21,\"ValueR\":255,\"ValueG\":255,\"ValueB\":255,\"Brightness\":100,\"Switch\":true,\"Name\":\"LED RGB\",\"FriendlyNames\":[\"led di marco\",\"luci di marco\",\"marco's color light\"],\"Description\":\"Striscia LED RGB\",\"nolog\":false,\"ObjectType\":0,\"LightType\":0},{\"ClientName\":\"marcoroom\",\"Pin\":26,\"Value\":255,\"Brightness\":100,\"PauseValue\":0,\"Switch\":true,\"Name\":\"Striscia a led bianca\",\"FriendlyNames\":[\"marco's light\"],\"Description\":\"Illuminazione a led della stanza di Marco\",\"ObjectType\":0,\"LightType\":1}],\"Hidden\":true},{\"Name\":\"living room's lights\",\"FriendlyNames\":[\"living room lights\",\"lights in living room\",\"living room's lights\"],\"Objects\":[{\"ClientName\":\"livingroom\",\"PinR\":20,\"PinG\":26,\"PinB\":19,\"ValueR\":255,\"ValueG\":255,\"ValueB\":255,\"Brightness\":100,\"Switch\":true,\"Name\":\"Retroilluminazione sul mobile\",\"FriendlyNames\":[\"living room led\",\"living room's led\"],\"Description\":\"Striscia LED RGB dietro al mobile del salone\",\"nolog\":false,\"ObjectType\":0,\"LightType\":0},{\"ClientName\":\"livingroom\",\"Pin\":21,\"Value\":255,\"Brightness\":100,\"PauseValue\":0,\"Switch\":true,\"Name\":\"Faretti sul mobile\",\"FriendlyNames\":[\"living room's spotlight\",\"living room spotlight\"],\"Description\":\"Faretti sul mobile del salone\",\"ObjectType\":0,\"LightType\":1}],\"Hidden\":true}]";
             //string jsonned = "";
-            HomeAutomationServer.server.Password = File.ReadAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/password.txt");
+            HomeAutomationServer.server.SetPassword(File.ReadAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/password.txt"));
             string jsonned = File.ReadAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json");
             
             if (!string.IsNullOrEmpty(jsonned))
@@ -51,21 +51,23 @@ namespace HomeAutomationCore
 
                         bool toAdd = true;
 
-                        foreach (Client.Client clnt in HomeAutomationServer.server.Clients)
+                        if (device.ClientName != null)
                         {
-                            if (clnt.Name.Equals(device.ClientName))
+                            foreach (Client.Client clnt in HomeAutomationServer.server.Clients)
                             {
-                                client = clnt;
-                                toAdd = false;
+                                if (clnt.Name.Equals(device.ClientName))
+                                {
+                                    client = clnt;
+                                    toAdd = false;
+                                }
+                            }
+                            if (toAdd) client = new Client.Client(null, 0, device.ClientName);
+
+                            if (HomeAutomationServer.server.Clients.Count == 0)
+                            {
+                                client = new Client.Client(null, 0, device.ClientName);
                             }
                         }
-                        if (toAdd) client = new Client.Client(null, 0, device.ClientName);
-
-                        if (HomeAutomationServer.server.Clients.Count == 0)
-                        {
-                            client = new Client.Client(null, 0, device.ClientName);
-                        }
-
                         bool exit = false;
                         foreach (IObject iobj in HomeAutomationServer.server.Objects)
                         {
@@ -207,10 +209,11 @@ namespace HomeAutomationCore
                 Console.WriteLine(iobj.GetName());
             }
 
+            new Client.Client(null, 0, "local");
             new HTTPHandler(new string[] { "http://*:8080/api/"});
-
             new FindInterfaces();
             new VoiceInterface();
+
             Console.WriteLine("\n\n\n\n" + JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms));
             Console.ReadLine();
             foreach(IObject iobj in HomeAutomationServer.server.Objects)

@@ -45,7 +45,7 @@ namespace HomeAutomation.Network
                     if (message == null) break;
                     Console.WriteLine("TCP message from a client -> " + message);
 
-                    if (!message.Contains("&password=" + HomeAutomationServer.server.Password)) return;
+                    if (!message.Contains("&password=" + HomeAutomationServer.server.GetPassword())) return;
 
                     string[] commands = message.Split('&');
 

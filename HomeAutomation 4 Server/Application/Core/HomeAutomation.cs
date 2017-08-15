@@ -27,7 +27,7 @@ namespace HomeAutomationCore
         public TelegramBot Telegram { get; set; }
 
         public string House;
-        public string Password;
+        private string Password;
 
         public HomeAutomationServer(string house, string password)
         {
@@ -41,6 +41,14 @@ namespace HomeAutomationCore
             //Telegram = new TelegramBot(null);
 
             NetworkInterfaces = new List<NetworkInterface>();
+        }
+        public string GetPassword()
+        {
+            return this.Password;
+        }
+        public void SetPassword(string password)
+        {
+            this.Password = password;
         }
     }
 }

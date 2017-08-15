@@ -16,7 +16,6 @@ namespace HomeAutomation.Objects.Lights
 
         public uint PinR, PinG, PinB;
         public uint ValueR, ValueG, ValueB, Brightness;
-        uint PauseR, PauseG, PauseB;
         public bool Switch;
 
         public string Name;
@@ -227,21 +226,6 @@ namespace HomeAutomation.Objects.Lights
             }
             PIGPIO.set_PWM_dutycycle(Client.PigpioID, (uint)led, (uint)values[1]);
         }
-        void Block(long durationTicks)
-        {
-            Stopwatch sw;
-            sw = Stopwatch.StartNew();
-            int i = 0;
-
-            while (sw.ElapsedTicks <= durationTicks)
-            {
-                if (sw.Elapsed.Ticks % 100 == 0)
-                {
-                    i++;
-                }
-            }
-            sw.Stop();
-        }
 
         public void Pause()
         {
@@ -343,6 +327,7 @@ namespace HomeAutomation.Objects.Lights
                                 light = (RGBLight)obj;
                                 break;
                             }
+                            if (obj.GetFriendlyNames() == null) continue;
                             if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
                             {
                                 light = (RGBLight)obj;

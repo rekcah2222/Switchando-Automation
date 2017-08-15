@@ -23,7 +23,7 @@ namespace HomeAutomation.Network
             message = HttpUtility.UrlDecode(message);
             Console.WriteLine(message);
 
-            if (!message.Contains("&password=" + HomeAutomationServer.server.Password)) return "INVALID PASSWORD";
+            if (!message.Contains("&password=" + HomeAutomationServer.server.GetPassword())) return "INVALID PASSWORD";
 
             if (message.Contains("get=devices"))
             {

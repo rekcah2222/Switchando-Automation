@@ -61,7 +61,7 @@ namespace HomeAutomation.Objects.Fans
         public void Start()
         {
             Console.WriteLine("Fan `" + this.Name + "` has been turned on.");
-            HomeAutomationServer.server.Telegram.Log("Fan `" + this.Name + "` has been turned on.");
+            //HomeAutomationServer.server.Telegram.Log("Fan `" + this.Name + "` has been turned on.");
             if (Client.Name.Equals("local"))
             {
                 PIGPIO.gpio_write(0, Pin, 1);
@@ -75,7 +75,7 @@ namespace HomeAutomation.Objects.Fans
         public void Stop()
         {
             Console.WriteLine("Fan `" + this.Name + "` has been turned off.");
-            HomeAutomationServer.server.Telegram.Log("Fan `" + this.Name + "` has been turned off.");
+            //HomeAutomationServer.server.Telegram.Log("Fan `" + this.Name + "` has been turned off.");
             if (Client.Name.Equals("local"))
             {
                 PIGPIO.gpio_write(0, Pin, 0);
@@ -130,6 +130,7 @@ namespace HomeAutomation.Objects.Fans
                             {
                                 fan = (SimpleFan)obj;
                             }
+                            if (obj.GetFriendlyNames() == null) continue;
                             if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
                             {
                                 fan = (SimpleFan)obj;

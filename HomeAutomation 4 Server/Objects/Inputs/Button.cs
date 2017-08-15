@@ -19,7 +19,7 @@ namespace HomeAutomation.Objects.Inputs
         public uint Pin;
         bool Status;
         bool EmulatedSwitchStatus;
-        bool IsRemote;
+        public bool IsRemote;
 
         Timer timer;
 
@@ -29,7 +29,43 @@ namespace HomeAutomation.Objects.Inputs
         public HomeAutomationObject ObjectType = HomeAutomationObject.BUTTON;
         public Button(Client client, string name, bool isRemote)
         {
-            new Button(client, name, 0, isRemote);
+            this.Client = client;
+            this.ClientName = client.Name;
+            this.Pin = 0;
+            this.Name = name;
+            this.IsRemote = isRemote;
+
+            this.Commands = new List<string>();
+            this.Objects = new List<string>();
+
+            if (isRemote)
+            {
+
+            }
+            else
+            {
+                if (Client.Name.Equals("local"))
+                {
+                    PIGPIO.set_pull_up_down(0, this.Pin, 2);
+                    Console.WriteLine("PUD-UP was set on GPIO" + this.Pin);
+
+                    timer = new Timer();
+
+                    timer.Elapsed += Tick;
+                    timer.Interval = 200;
+                    timer.Start();
+                }
+            }
+
+            HomeAutomationServer.server.Objects.Add(this);
+
+            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
+            {
+                if (netInt.Id.Equals("button")) return;
+            }
+            NetworkInterface.Delegate requestHandler;
+            requestHandler = SendParameters;
+            NetworkInterface networkInterface = new NetworkInterface("button", requestHandler);
         }
         public Button(Client client, string name, uint pin, bool isRemote)
         {
@@ -61,6 +97,8 @@ namespace HomeAutomation.Objects.Inputs
                 }
             }
 
+            HomeAutomationServer.server.Objects.Add(this);
+
             foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
             {
                 if (netInt.Id.Equals("button")) return;
@@ -68,8 +106,6 @@ namespace HomeAutomation.Objects.Inputs
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
             NetworkInterface networkInterface = new NetworkInterface("button", requestHandler);
-
-            HomeAutomationServer.server.Objects.Add(this);
         }
         public void SetClient(Client client)
         {
@@ -122,7 +158,7 @@ namespace HomeAutomation.Objects.Inputs
             Console.WriteLine(this.Name + " status: " + this.Status);
             if (value)
             {
-                HomeAutomationServer.server.Telegram.Log("Button `" + this.Name + "` has been pressed.");
+                //HomeAutomationServer.server.Telegram.Log("Button `" + this.Name + "` has been pressed.");
                 if (EmulatedSwitchStatus) EmulatedSwitchStatus = false; else EmulatedSwitchStatus = true;
                 foreach (string command in Commands)
                 {
@@ -211,10 +247,6 @@ namespace HomeAutomation.Objects.Inputs
                         foreach (IObject obj in HomeAutomationServer.server.Objects)
                         {
                             if (obj.GetName().Equals(command[1]))
-                            {
-                                button = (Button)obj;
-                            }
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
                             {
                                 button = (Button)obj;
                             }

@@ -188,7 +188,6 @@ namespace HomeAutomation.Scenarios
                         break;
                 }
             }
-            return;
         }
 
         public string GetName()
