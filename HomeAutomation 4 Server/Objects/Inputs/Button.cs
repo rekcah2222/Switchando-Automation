@@ -181,6 +181,7 @@ namespace HomeAutomation.Objects.Inputs
                         }
                     }
                 }
+                if (this.Objects.Count == 0) return;
                 List<ISwitch> objectsList = new List<ISwitch>();
                 foreach (IObject iobj in HomeAutomationServer.server.Objects)
                 {

@@ -1,6 +1,5 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.ConfigRetriver;
-using HomeAutomation.Logging.Telegram;
 using HomeAutomation.Network;
 using HomeAutomation.Network.Interfaces.Voice;
 using HomeAutomation.Network.Objects;
@@ -10,16 +9,14 @@ using HomeAutomation.Objects.Fans;
 using HomeAutomation.Objects.Inputs;
 using HomeAutomation.Objects.Lights;
 using HomeAutomation.Rooms;
-using HomeAutomation.Scenarios;
 using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 
 namespace HomeAutomationCore
 {
-    class HomeAutomationMain
+    static class HomeAutomationMain
     {
         static void Main(string[] args)
         {
@@ -36,7 +33,9 @@ namespace HomeAutomationCore
             //string jsonned = "";
             HomeAutomationServer.server.SetPassword(File.ReadAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/password.txt"));
             string jsonned = File.ReadAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json");
-            
+
+            Console.WriteLine(HomeAutomationServer.server.GetPassword());
+
             if (!string.IsNullOrEmpty(jsonned))
             {
                 ModelRoom[] rooms = JsonConvert.DeserializeObject<ModelRoom[]>(jsonned);

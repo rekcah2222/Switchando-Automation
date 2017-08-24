@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace HomeAutomation.Network
 {
-    public class TCPServer
+    class TCPServer
     {
         private static TcpListener _listener;
         public static void StartListening()
