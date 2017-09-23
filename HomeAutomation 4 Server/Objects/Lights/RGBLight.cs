@@ -1,9 +1,11 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Dictionaries;
 using HomeAutomation.Network;
+using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 
@@ -26,7 +28,7 @@ namespace HomeAutomation.Objects.Lights
 
         Semaphore Semaphore;
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.LIGHT;
+        public string ObjectType = "LIGHT_GPIO_RGB";
         public LightType LightType = LightType.RGB_LIGHT;
 
         public RGBLight()
@@ -282,9 +284,9 @@ namespace HomeAutomation.Objects.Lights
         {
             return LightType.RGB_LIGHT;
         }
-        public HomeAutomationObject GetObjectType()
+        public string GetObjectType()
         {
-            return HomeAutomationObject.LIGHT;
+            return "LIGHT_GPIO_RGB";
         }
         public string GetName()
         {
@@ -302,7 +304,7 @@ namespace HomeAutomation.Objects.Lights
         {
             return NetworkInterface.FromId("light_rgb");
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             RGBLight light = null;
             uint R = 0;
@@ -372,21 +374,21 @@ namespace HomeAutomation.Objects.Lights
             if (status != null)
             {
                 light.Pause(bool.Parse(status));
-                return;
+                return "";
             }
             if (color != null)
             {
                 uint[] vls = ColorConverter.ConvertNameToRGB(color);
                 light.Set(vls[0], vls[1], vls[2], dimmer);
-                return;
+                return "";
             }
             if (dimm_percentage != 400)
             {
                 light.Dimm(dimm_percentage, dimmer);
-                return;
+                return "";
             }
             light.Set(R, G, B, dimmer, nolog);
-            return;
+            return "";
         }
         void UploadValues(uint ValueR, uint ValueG, uint ValueB, int DimmerIntervals)
         {
@@ -404,6 +406,26 @@ namespace HomeAutomation.Objects.Lights
                 PIGPIO.set_PWM_dutycycle(0, (uint)PinG, (uint)ValueG);
                 PIGPIO.set_PWM_dutycycle(0, (uint)PinB, (uint)ValueB);
             }
+        }
+        public static void Setup(Room room, dynamic device)
+        {
+            RGBLight light = new RGBLight();
+            light.PinR = (uint)device.PinR;
+            light.PinG = (uint)device.PinG;
+            light.PinB = (uint)device.PinB;
+            light.Name = device.Name;
+            light.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
+            light.Description = device.Description;
+            light.Switch = device.Switch;
+            light.ValueR = (uint)device.ValueR;
+            light.ValueG = (uint)device.ValueG;
+            light.ValueB = (uint)device.ValueB;
+            light.ClientName = device.Client.Name;
+            light.SetClient(device.Client);
+
+            HomeAutomationServer.server.Objects.Add(light);
+            room.AddItem(light);
+            light.Init();
         }
     }
 }

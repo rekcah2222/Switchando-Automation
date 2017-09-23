@@ -1,4 +1,6 @@
-﻿using HomeAutomation.Logging.Telegram;
+﻿using HomeAutomation.Application.ConfigRetriver;
+using HomeAutomation.ConfigRetriver;
+using HomeAutomation.Logging.Telegram;
 using HomeAutomation.Network;
 using HomeAutomation.Objects;
 using HomeAutomation.Rooms;
@@ -18,6 +20,8 @@ namespace HomeAutomationCore
 
         public List<Client.Client> Clients { get; set; }
         public List<NetworkInterface> NetworkInterfaces { get; set; }
+        public List<SetupTool> Setups { get; set; }
+        public List<Configuration> Configs { get; set; }
         public List<Identity> Identities { get; set; }
 
         public List<IObject> Objects { get; set; }
@@ -41,6 +45,8 @@ namespace HomeAutomationCore
             //Telegram = new TelegramBot(null);
 
             NetworkInterfaces = new List<NetworkInterface>();
+            Setups = new List<SetupTool>();
+            Configs = new List<Configuration>();
         }
         public string GetPassword()
         {

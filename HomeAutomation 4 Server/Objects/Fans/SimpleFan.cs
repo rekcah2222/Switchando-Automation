@@ -22,7 +22,7 @@ namespace HomeAutomation.Objects.Fans
         public bool Enabled;
         public string Description;
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.FAN;
+        public string ObjectType = "SIMPLE_FAN";
 
         public SimpleFan()
         {
@@ -98,9 +98,9 @@ namespace HomeAutomation.Objects.Fans
         {
             return Name;
         }
-        public HomeAutomationObject GetObjectType()
+        public string GetObjectType()
         {
-            return HomeAutomationObject.FAN;
+            return "SIMPLE_FAN";
         }
         public string[] GetFriendlyNames()
         {
@@ -114,7 +114,7 @@ namespace HomeAutomation.Objects.Fans
         {
             return NetworkInterface.FromId("fan_simple");
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             SimpleFan fan = null;
             foreach (string cmd in request)
@@ -150,6 +150,7 @@ namespace HomeAutomation.Objects.Fans
                         break;
                 }
             }
+            return "";
         }
     }
 }

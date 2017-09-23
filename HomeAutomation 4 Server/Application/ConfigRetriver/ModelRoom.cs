@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Dynamic;
 
 namespace HomeAutomation.ConfigRetriver
 {
@@ -6,7 +7,7 @@ namespace HomeAutomation.ConfigRetriver
     {
         public string Name;
         public string[] FriendlyNames;
-        public List<HomeAutomationModel> Objects;
+        public List<ExpandoObject> Objects;
         public bool Hidden;
     }
 }

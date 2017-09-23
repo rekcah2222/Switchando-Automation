@@ -1,6 +1,7 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -27,7 +28,7 @@ namespace HomeAutomation.Objects.Inputs
 
         public List<string> Objects;
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.SWITCH_BUTTON;
+        public string ObjectType = "SWITCH_BUTTON";
         public SwitchButton(Client client, string name, bool isRemote)
         {
             new SwitchButton(client, name, 0, IsRemote);
@@ -203,9 +204,9 @@ namespace HomeAutomation.Objects.Inputs
         {
             return this.Name;
         }
-        public HomeAutomationObject GetObjectType()
+        public string GetObjectType()
         {
-            return HomeAutomationObject.SWITCH_BUTTON;
+            return "SWITCH_BUTTON";
         }
         public NetworkInterface GetInterface()
         {
@@ -215,7 +216,7 @@ namespace HomeAutomation.Objects.Inputs
         {
             return new string[0];
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             SwitchButton button = null;
             foreach (string cmd in request)
@@ -246,6 +247,26 @@ namespace HomeAutomation.Objects.Inputs
                         break;
                 }
             }
+            return "";
+        }
+        public static void Setup(Room room, dynamic device)
+        {
+            SwitchButton button = new SwitchButton(device.Client, device.Name, device.Pin, device.IsRemote);
+            foreach (string command in device.CommandsOn)
+            {
+                button.AddCommand(command, true);
+            }
+            foreach (string command in device.CommandsOff)
+            {
+                button.AddCommand(command, false);
+            }
+            foreach (string objectName in device.Objects)
+            {
+                button.AddObject(objectName);
+            }
+            button.ClientName = device.Client.Name;
+            button.SetClient(device.Client);
+            room.AddItem(button);
         }
     }
 }

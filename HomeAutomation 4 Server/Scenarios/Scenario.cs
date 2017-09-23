@@ -146,7 +146,7 @@ namespace HomeAutomation.Scenarios
             }
         }
 
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             Scenario scenario = null;
 
@@ -188,6 +188,7 @@ namespace HomeAutomation.Scenarios
                         break;
                 }
             }
+            return "";
         }
 
         public string GetName()

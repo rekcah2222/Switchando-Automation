@@ -5,11 +5,12 @@ using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
+using System.Collections.Generic;
 using System.Net;
 
 namespace HomeAutomation.Objects.External
 {
-    class WebRelay : ISwitch
+    public class WebRelay : ISwitch
     {
         public string Name;
         public string ID;
@@ -18,8 +19,9 @@ namespace HomeAutomation.Objects.External
         public string Description;
         public bool Online = false;
         public string Address;
+        public string ClientName = "local";
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.EXTERNAL_SWITCH;
+        public string ObjectType = "EXTERNAL_SWITCH";
 
         public WebRelay()
         {
@@ -56,7 +58,9 @@ namespace HomeAutomation.Objects.External
             {
                 try
                 {
+                    Console.WriteLine("Forwarding request...");
                     new WebClient().UploadString("http://" + Address + "/HomeAutomation/" + ID + "/on", "");
+                    Console.WriteLine("http://" + Address + "/HomeAutomation/" + ID + "/on");
                 }
                 catch
                 {
@@ -119,9 +123,9 @@ namespace HomeAutomation.Objects.External
         {
             return ID;
         }
-        public HomeAutomationObject GetObjectType()
+        public string GetObjectType()
         {
-            return HomeAutomationObject.EXTERNAL_SWITCH;
+            return "EXTERNAL_SWITCH";
         }
         public string[] GetFriendlyNames()
         {
@@ -131,7 +135,7 @@ namespace HomeAutomation.Objects.External
         {
             return NetworkInterface.FromId("webrelay");
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             WebRelay webrelay = null;
             foreach (string cmd in request)
@@ -144,7 +148,7 @@ namespace HomeAutomation.Objects.External
                         string[] idip = command[1].Split('@');
                         foreach (IObject obj in HomeAutomationServer.server.Objects)
                         {
-                            if (obj.GetObjectType() == HomeAutomationObject.EXTERNAL_SWITCH)
+                            if (obj.GetObjectType() == "EXTERNAL_SWITCH")
                             {
                                 WebRelay relay = (WebRelay)obj;
                                 if (relay.ID.Equals(idip[0]))
@@ -183,6 +187,20 @@ namespace HomeAutomation.Objects.External
                         break;
                 }
             }
+            return "";
+        }
+        public static void Setup(Room room, dynamic device)
+        {
+            WebRelay relay = new WebRelay();
+            relay.Name = device.Name;
+            relay.Description = device.Description;
+            relay.Enabled = device.Switch;
+            relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
+            relay.Online = device.Online;
+            relay.ID = device.ID;
+
+            HomeAutomationServer.server.Objects.Add(relay);
+            room.AddItem(relay);
         }
     }
 }

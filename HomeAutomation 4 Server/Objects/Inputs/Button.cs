@@ -1,6 +1,7 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -26,7 +27,7 @@ namespace HomeAutomation.Objects.Inputs
         public List<string> Commands;
         public List<string> Objects;
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.BUTTON;
+        public string ObjectType = "BUTTON";
         public Button(Client client, string name, bool isRemote)
         {
             this.Client = client;
@@ -223,9 +224,9 @@ namespace HomeAutomation.Objects.Inputs
         {
             return this.Name;
         }
-        public HomeAutomationObject GetObjectType()
+        public string GetObjectType()
         {
-            return HomeAutomationObject.BUTTON;
+            return "BUTTON";
         }
         public NetworkInterface GetInterface()
         {
@@ -235,7 +236,7 @@ namespace HomeAutomation.Objects.Inputs
         {
             return new string[0];
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             Button button = null;
             foreach (string cmd in request)
@@ -259,6 +260,22 @@ namespace HomeAutomation.Objects.Inputs
                         break;
                 }
             }
+            return "";
+        }
+        public static void Setup(Room room, dynamic device)
+        {
+            Button button = new Button(device.Client, device.Name, (uint)device.Pin, device.IsRemote);
+            foreach (string command in device.Commands)
+            {
+                button.AddCommand(command);
+            }
+            foreach (string objectName in device.Objects)
+            {
+                button.AddObject(objectName);
+            }
+            button.ClientName = device.Client.Name;
+            button.SetClient(device.Client);
+            room.AddItem(button);
         }
     }
 }

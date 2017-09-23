@@ -41,13 +41,13 @@ namespace HomeAutomation.Rooms
             foreach (IObject item in Objects)
             {
                 //Console.WriteLine("switching_pre");
-                if (item.GetObjectType().Equals(HomeAutomationObject.LIGHT))
+                if (item.GetObjectType().Equals("LIGHT_GPIO_RGB"))
                 {
                     //Console.WriteLine("switching");
                     ((ILight)item).Pause(status);
                     Thread.Sleep(1000);
                  }
-                else if (item.GetObjectType().Equals(HomeAutomationObject.GENERIC_SWITCH))
+                else if (item.GetObjectType().Equals("GENERIC_SWITCH"))
                 {
                     if (status) ((ISwitch)item).Start(); else ((ISwitch)item).Stop();
                 }
@@ -58,7 +58,7 @@ namespace HomeAutomation.Rooms
             HomeAutomationServer.server.Telegram.Log("Changing color of room `" + this.Name + "`.");
             foreach (IObject item in Objects)
             {
-                if (item.GetObjectType().Equals(HomeAutomationObject.LIGHT))
+                if (item.GetObjectType().Equals("LIGHT"))
                 {
                     if (((ILight)item).GetLightType() == LightType.RGB_LIGHT)
                     {
@@ -77,14 +77,14 @@ namespace HomeAutomation.Rooms
             HomeAutomationServer.server.Telegram.Log("Dimming room `" + this.Name + "` to `" + percentace + "%`" + "(" + dimmer + "ms).");
             foreach (IObject item in Objects)
             {
-                if (item.GetObjectType().Equals(HomeAutomationObject.LIGHT))
+                if (item.GetObjectType().Equals("LIGHT_GPIO_RGB"))
                 {
                     ((ILight)item).Dimm(percentace, dimmer);
                     Thread.Sleep(1000);
                 }
             }
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             Room room = null;
             uint R = 0;
@@ -147,20 +147,21 @@ namespace HomeAutomation.Rooms
             if (status != null)
             {
                 room.Switch(bool.Parse(status));
-                return;
+                return "";
             }
             if (color != null)
             {
                 uint[] vls = ColorConverter.ConvertNameToRGB(color);
                 room.Color(vls[0], vls[1], vls[2], dimmer);
-                return;
+                return "";
             }
             if (dimm_percentage != 400)
             {
                 room.Dimm(dimm_percentage, dimmer);
-                return;
+                return "";
             }
             room.Color(R, G, B, dimmer);
+            return "";
         }
     }
 }

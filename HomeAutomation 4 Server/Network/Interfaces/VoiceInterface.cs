@@ -14,7 +14,7 @@ namespace HomeAutomation.Network.Interfaces.Voice
             this.networkInterface = new NetworkInterface("voice", Handler);
         }
 
-        public static void Handler(string[] request)
+        public static string Handler(string[] request)
         {
             string identity = "my";
             foreach (string cmd in request)
@@ -41,33 +41,34 @@ namespace HomeAutomation.Network.Interfaces.Voice
                                 status = true;
                                 voice = voice.Substring(3);
                                 Answer(voice, status, identity);
-                                return;
+                                return "";
                             }
                             else if (voice.StartsWith("off"))
                             {
                                 status = false;
                                 voice = voice.Substring(4);
                                 Answer(voice, status, identity);
-                                return;
+                                return "";
                             }
                             else if (voice.EndsWith("on"))
                             {
                                 status = true;
                                 voice = voice.Substring(0, voice.Length - 3);
                                 Answer(voice, status, identity);
-                                return;
+                                return "";
                             }
                             else if (voice.EndsWith("off"))
                             {
                                 status = false;
                                 voice = voice.Substring(0, voice.Length - 4);
                                 Answer(voice, status, identity);
-                                return;
+                                return "";
                             }
                         }
                         break;
                 }
             }
+            return "";
         }
         static void Answer(string voice, bool status, string identity)
         {

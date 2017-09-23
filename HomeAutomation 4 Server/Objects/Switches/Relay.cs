@@ -1,9 +1,11 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
+using System.Collections.Generic;
 
 namespace HomeAutomation.Objects.Fans
 {
@@ -17,7 +19,7 @@ namespace HomeAutomation.Objects.Fans
         public bool Enabled;
         public string Description;
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.GENERIC_SWITCH;
+        public string ObjectType = "GENERIC_SWITCH";
 
         public Relay()
         {
@@ -93,9 +95,9 @@ namespace HomeAutomation.Objects.Fans
         {
             return Name;
         }
-        public HomeAutomationObject GetObjectType()
+        public string GetObjectType()
         {
-            return HomeAutomationObject.GENERIC_SWITCH;
+            return "GENERIC_SWITCH";
         }
         public string[] GetFriendlyNames()
         {
@@ -109,7 +111,7 @@ namespace HomeAutomation.Objects.Fans
         {
             return NetworkInterface.FromId("relay");
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             Relay fan = null;
             foreach (string cmd in request)
@@ -145,6 +147,21 @@ namespace HomeAutomation.Objects.Fans
                         break;
                 }
             }
+            return "";
+        }
+        public static void Setup(Room room, dynamic device)
+        {
+            Relay relay = new Relay();
+            relay.Pin = (uint)device.Pin;
+            relay.Name = device.Name;
+            relay.Description = device.Description;
+            relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
+            relay.Enabled = device.Switch;
+            relay.ClientName = device.Client.Name;
+            relay.SetClient(device.Client);
+
+            HomeAutomationServer.server.Objects.Add(relay);
+            room.AddItem(relay);
         }
     }
 }

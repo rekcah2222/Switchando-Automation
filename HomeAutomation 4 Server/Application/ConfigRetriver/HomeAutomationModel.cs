@@ -1,8 +1,10 @@
-﻿using HomeAutomation.Objects;
+﻿/*using HomeAutomation.Objects;
 using HomeAutomation.Objects.Lights;
+using HomeAutomation.Objects.Switches;
+
 namespace HomeAutomation.ConfigRetriver
 {
-    class HomeAutomationModel
+    class HomeAutomationModelBackup
     {
         public uint PinR, PinG, PinB;
         public uint ValueR, ValueG, ValueB, Brightness;
@@ -22,7 +24,7 @@ namespace HomeAutomation.ConfigRetriver
         public bool Online;
 
 
-        public HomeAutomationObject ObjectType;
+        public string ObjectType;
         public LightType LightType;
 
         public bool Enabled;
@@ -32,5 +34,10 @@ namespace HomeAutomation.ConfigRetriver
         public string[] CommandsOn;
         public string[] CommandsOff;
         public string[] Objects;
+
+        public HomeAutomationModelBackup OpenDevice;
+        public HomeAutomationModelBackup CloseDevice;
+
+        public byte TotalSteps;
     }
-}
+}*/

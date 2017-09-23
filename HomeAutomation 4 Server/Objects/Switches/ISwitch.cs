@@ -13,4 +13,9 @@ namespace HomeAutomation.Objects.Switches
         void Stop();
         bool IsOn();
     }
+    public enum ERelayType
+    {
+        GPIO,
+        WEB
+    }
 }

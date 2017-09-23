@@ -10,7 +10,7 @@ namespace HomeAutomation.Objects.Lights
     public interface ILight : ISwitch
     {
         LightType GetLightType();
-        string GetName();
+        new string GetName();
         void Pause();
         void Pause(bool status);
         void Dimm(uint percentage, int dimmerIntervals);

@@ -55,6 +55,9 @@
   <PropertyGroup>
     <SignManifests>false</SignManifests>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>HomeAutomationCore.HomeAutomationMain</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -80,11 +83,14 @@
   <ItemGroup>
     <Compile Include="Application\Client\Client.cs" />
     <Compile Include="Application\ConfigRetriver\ConfigRetriver.cs" />
+    <Compile Include="Application\ConfigRetriver\Configuration.cs" />
     <Compile Include="Application\ConfigRetriver\HomeAutomationModel.cs" />
     <Compile Include="Application\ConfigRetriver\ModelRoom.cs" />
+    <Compile Include="Application\ConfigRetriver\SetupTool.cs" />
     <Compile Include="Application\Core\HomeAutomation.cs" />
     <Compile Include="Dictionaries\ColorWords.cs" />
     <Compile Include="HomeAutomationMain.cs" />
+    <Compile Include="Logging\Logger.cs" />
     <Compile Include="Logging\Telegram\TelegramBot.cs" />
     <Compile Include="Network\Interfaces\FindInterfaces.cs" />
     <Compile Include="Network\HTTPHandler.cs" />
@@ -93,6 +99,9 @@
     <Compile Include="Network\NetworkInterfaces.cs" />
     <Compile Include="Network\TCPServer.cs" />
     <Compile Include="Objects\Alarm\Alarm.cs" />
+    <Compile Include="Objects\Blinds\Blinds.cs" />
+    <Compile Include="Objects\External\Plugins\IPlugin.cs" />
+    <Compile Include="Objects\External\Plugins\Plugins.cs" />
     <Compile Include="Objects\External\WebRelay.cs" />
     <Compile Include="Objects\Fans\SimpleFan.cs" />
     <Compile Include="Objects\Inputs\Button.cs" />

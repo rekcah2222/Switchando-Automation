@@ -1,5 +1,6 @@
 ﻿using HomeAutomation.Network;
 using HomeAutomation.Objects;
+using HomeAutomation.Objects.Blinds;
 using HomeAutomation.Objects.External;
 using HomeAutomation.Objects.Fans;
 using HomeAutomation.Objects.Inputs;
@@ -31,12 +32,21 @@ namespace HomeAutomation.ConfigRetriver
             requestHandler = SendParameters;
             NetworkInterface networkInterface = new NetworkInterface("configuration", requestHandler);
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             foreach (string cmd in request)
             {
                 string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
+                if (command[0].Equals("interface"))
+                {
+                    foreach(Configuration config in HomeAutomationServer.server.Configs)
+                    {
+                        if (command[1].StartsWith("configuration/" + config.Id))
+                        {
+                            return config.Run(request);
+                        }
+                    }
+                }
                 switch (command[0])
                 {
                     case "addroom":
@@ -63,6 +73,9 @@ namespace HomeAutomation.ConfigRetriver
 
                     case "addlightw":
                         CreateLightW(request);
+                        break;
+                    case "addblinds":
+                        CreateBlinds(request);
                         break;
 
                     case "addsimplefan":
@@ -105,6 +118,7 @@ namespace HomeAutomation.ConfigRetriver
             }
             string json = JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms);
             File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json", json);
+            return "";
         }
         private static void CreateClient(string[] data)
         {
@@ -290,6 +304,7 @@ namespace HomeAutomation.ConfigRetriver
                         {
                             if (clnt.Name.Equals(clientName))
                             {
+                                
                                 client = clnt;
                             }
                         }
@@ -486,6 +501,97 @@ namespace HomeAutomation.ConfigRetriver
             else if (createButton.Equals("switch_button"))
             {
                 relay.AddSwitchButton(room);
+            }
+        }
+        private static void CreateBlinds(string[] data)
+        {
+            string name = null;
+            string[] friendlyNames = null;
+            string description = null;
+            Client client = null;
+            Room room = null;
+
+            uint openPin = 0;
+            uint closePin = 0;
+
+            byte totalsteps = 0;
+
+            string webrelayOpenId = null;
+            string webrelayCloseId = null;
+
+            foreach (string cmd in data)
+            {
+                string[] command = cmd.Split('=');
+                if (command[0].Equals("interface")) continue;
+                switch (command[0])
+                {
+                    case "addblinds":
+                        name = command[1];
+                        break;
+                    case "description":
+                        description = command[1];
+                        break;
+                    case "setfriendlynames":
+                        string names = command[1];
+                        friendlyNames = names.Split(',');
+                        break;
+
+                    case "openpin":
+                        string pinStr = command[1];
+                        openPin = uint.Parse(pinStr);
+                        break;
+                    case "closepin":
+                        pinStr = command[1];
+                        closePin = uint.Parse(pinStr);
+                        break;
+                    case "webrelayopenid":
+                        webrelayOpenId = command[1];
+                        break;
+                    case "webrelaycloseid":
+                        webrelayCloseId = command[1];
+                        break;
+
+                    case "totalsteps":
+                        totalsteps = byte.Parse(command[1]);
+                        break;
+
+                    case "client":
+                        string clientName = command[1];
+                        foreach (Client clnt in HomeAutomationServer.server.Clients)
+                        {
+                            if (clnt.Name.Equals(clientName))
+                            {
+                                client = clnt;
+                            }
+                        }
+                        if (client == null) return;
+                        break;
+
+                    case "room":
+                        foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                        {
+                            if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                            {
+                                room = stanza;
+                            }
+                        }
+                        break;
+                }
+            }
+            if (room == null) return;
+            if (openPin == closePin && webrelayOpenId != null && webrelayCloseId != null)
+            {
+                WebRelay openRelay = new WebRelay(name + "_openrelay", webrelayOpenId, "", new string[0]);
+                WebRelay closeRelay = new WebRelay(name + "_closerelay", webrelayCloseId, "", new string[0]);
+                Blinds blinds = new Blinds(client, name, openRelay, closeRelay, totalsteps, description, friendlyNames);
+                room.AddItem(blinds);
+            }
+            else
+            {
+                Relay openRelay = new Relay(client, name + "_openrelay", openPin, "", new string[0]);
+                Relay closeRelay = new Relay(client, name + "_closerelay", closePin, "", new string[0]);
+                Blinds blinds = new Blinds(client, name, openRelay, closeRelay, totalsteps, description, friendlyNames);
+                room.AddItem(blinds);
             }
         }
         private static void CreateSimpleFan(string[] data)
@@ -691,7 +797,7 @@ namespace HomeAutomation.ConfigRetriver
 
             foreach (IObject iobj in HomeAutomationServer.server.Objects)
             {
-                if (iobj.GetObjectType() == HomeAutomationObject.SWITCH_BUTTON)
+                if (iobj.GetObjectType() == "SWITCH_BUTTON")
                 {
                     if (iobj.GetName().Equals(name))
                     {
@@ -724,7 +830,7 @@ namespace HomeAutomation.ConfigRetriver
 
             foreach (IObject iobj in HomeAutomationServer.server.Objects)
             {
-                if (iobj.GetObjectType() == HomeAutomationObject.BUTTON)
+                if (iobj.GetObjectType() == "BUTTON")
                 {
                     if (iobj.GetName().Equals(name))
                     {
@@ -769,7 +875,7 @@ namespace HomeAutomation.ConfigRetriver
                         switchable = (ISwitch)iobj;
                     }
                 }
-                if (iobj.GetObjectType() == HomeAutomationObject.BUTTON)
+                if (iobj.GetObjectType() == "BUTTON")
                 {
                     if (iobj.GetName().Equals(name))
                     {
@@ -817,7 +923,7 @@ namespace HomeAutomation.ConfigRetriver
                         switchable = (ISwitch)iobj;
                     }
                 }
-                if (iobj.GetObjectType() == HomeAutomationObject.SWITCH_BUTTON)
+                if (iobj.GetObjectType() == "SWITCH_BUTTON")
                 {
                     if (iobj.GetName().Equals(name))
                     {

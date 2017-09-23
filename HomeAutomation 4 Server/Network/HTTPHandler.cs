@@ -60,7 +60,7 @@ namespace HomeAutomation.Network
                 {
                     if (networkInterface.Id.Equals(icommand[1]))
                     {
-                        networkInterface.Run(commands);
+                        return networkInterface.Run(commands);
                     }
                 }
             }

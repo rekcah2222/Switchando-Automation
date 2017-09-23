@@ -1,8 +1,10 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
+using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,8 +25,8 @@ namespace HomeAutomation.Objects.Lights
         public string[] FriendlyNames;
         public string Description;
 
-        public HomeAutomationObject ObjectType = HomeAutomationObject.LIGHT;
-        public LightType LightType = LightType.W_LIGHT;
+        public string ObjectType = "LIGHT_GPIO_W";
+        //public LightType LightType = LightType.W_LIGHT;
 
         public WLight()
         {
@@ -231,9 +233,9 @@ namespace HomeAutomation.Objects.Lights
         {
             return LightType.W_LIGHT;
         }
-        public new HomeAutomationObject GetObjectType()
+        public new string GetObjectType()
         {
-            return HomeAutomationObject.LIGHT;
+            return "LIGHT";
         }
         public string GetName()
         {
@@ -255,7 +257,7 @@ namespace HomeAutomation.Objects.Lights
         {
             Client.Sendata("interface=light_w&objname=" + this.Name + "&W=" + Value + "&dimmer=" + DimmerIntervals);
         }
-        public static void SendParameters(string[] request)
+        public static string SendParameters(string[] request)
         {
             WLight light = null;
             uint Value = 0;
@@ -310,15 +312,15 @@ namespace HomeAutomation.Objects.Lights
             {
 
                 light.Pause(bool.Parse(status));
-                return;
+                return "";
             }
             if (dimm_percentage != 400)
             {
                 light.Dimm(dimm_percentage, dimmer);
-                return;
+                return "";
             }
             light.Set(Value, dimmer, nolog);
-            return;
+            return "";
         }
         public void Init()
         {
@@ -327,6 +329,25 @@ namespace HomeAutomation.Objects.Lights
                 PIGPIO.set_PWM_dutycycle(0, Pin, Value);
                 PIGPIO.set_PWM_frequency(0, Pin, 4000);
             }
+        }
+        public static void Setup(Room room, dynamic device)
+        {
+            WLight light = new WLight();
+            light.Pin = (uint)device.Pin;
+            light.Name = device.Name;
+            //light.FriendlyNames = ((List<object>)device.FriendlyNames).ToArray().Where(x => x != null)
+            //.Select(x => x.ToString())
+            //.ToArray();
+            light.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
+            light.Description = device.Description;
+            light.Switch = device.Switch;
+            light.Value = (uint)device.Value;
+            light.ClientName = device.Client.Name;
+            light.SetClient(device.Client);
+
+            HomeAutomationServer.server.Objects.Add(light);
+            room.AddItem(light);
+            light.Init();
         }
     }
 }

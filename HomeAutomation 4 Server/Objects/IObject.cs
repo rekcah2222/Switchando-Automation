@@ -10,11 +10,11 @@ namespace HomeAutomation.Objects
     public interface IObject
     {
         string GetName();
-        HomeAutomationObject GetObjectType();
+        string GetObjectType();
         NetworkInterface GetInterface();
         string[] GetFriendlyNames();
     }
-    public enum HomeAutomationObject
+    public enum HomeAutomationObjectBackup
     {
         LIGHT,
         FAN,
@@ -22,6 +22,7 @@ namespace HomeAutomation.Objects
         ROOM,
         BUTTON,
         SWITCH_BUTTON,
-        EXTERNAL_SWITCH
+        EXTERNAL_SWITCH,
+        BLINDS
     }
 }
