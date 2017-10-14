@@ -1,4 +1,5 @@
 ﻿using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.External;
 using HomeAutomation.Objects.Fans;
 using HomeAutomation.Objects.Switches;
@@ -24,6 +25,7 @@ namespace HomeAutomation.Objects.Blinds
         public ISwitch CloseDevice;
 
         public string ObjectType = "BLINDS";
+        public string ObjectModel = "BLINDS";
 
         public int TotalSteps;
         public int Step;
@@ -176,47 +178,142 @@ namespace HomeAutomation.Objects.Blinds
         {
             return this.FriendlyNames;
         }
-        static string SendParameters(string[] request)
+        private static Blinds FindBlindsFromName(string name)
         {
             Blinds blinds = null;
-
-            foreach (string cmd in request)
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().ToLower().Equals(command[1].ToLower()))
-                            {
-                                blinds = (Blinds)obj;
-                                break;
-                            }
-                            if (obj.GetFriendlyNames() == null) continue;
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                            {
-                                blinds = (Blinds)obj;
-                                break;
-                            }
-                        }
-                        break;
-                    case "percentage":
-                        int percentage = int.Parse(command[1]);
-                        //Console.WriteLine(blinds.TotalSteps);
-                        double prestep = (percentage / 100d) * blinds.TotalSteps;
-                        int step = (int)Math.Round(prestep);
-                        blinds.Move(step);
-                        return "";
-                    case "switch":
-                        bool status = bool.Parse(command[1]);
-                        if (status) blinds.Start(); else blinds.Stop();
-                        return "";
-                    case "update":
-                        blinds.Step = int.Parse(command[1]);
-                        return "";
+                    blinds = (Blinds)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    blinds = (Blinds)obj;
+                    break;
+                }
+            }
+            return blinds;
+        }
+        static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("switch"))
+            {
+                Blinds blinds = null;
+                bool status = false;
 
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            blinds = FindBlindsFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                }
+                if (blinds == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                if (status) blinds.Start(); else blinds.Stop();
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (method.Equals("move"))
+            {
+                Blinds blinds = null;
+                int percentage = 255;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            blinds = FindBlindsFromName(command[1]);
+                            break;
+                        case "value":
+                            percentage = int.Parse(command[1]);
+                            break;
+                    }
+                }
+                if (blinds == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                double prestep = (percentage / 100d) * blinds.TotalSteps;
+                int step = (int)Math.Round(prestep);
+                blinds.Move(step);
+
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (method.Equals("internal/updateStep"))
+            {
+                Blinds blinds = null;
+                int percentage = 255;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            blinds = FindBlindsFromName(command[1]);
+                            break;
+                        case "value":
+                            percentage = int.Parse(command[1]);
+                            break;
+                    }
+                }
+                if (blinds == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                blinds.Step = percentage;
+
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (string.IsNullOrEmpty(method))
+            {
+                Blinds blinds = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().ToLower().Equals(command[1].ToLower()))
+                                {
+                                    blinds = (Blinds)obj;
+                                    break;
+                                }
+                                if (obj.GetFriendlyNames() == null) continue;
+                                if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                                {
+                                    blinds = (Blinds)obj;
+                                    break;
+                                }
+                            }
+                            break;
+                        case "percentage":
+                            int percentage = int.Parse(command[1]);
+                            //Console.WriteLine(blinds.TotalSteps);
+                            double prestep = (percentage / 100d) * blinds.TotalSteps;
+                            int step = (int)Math.Round(prestep);
+                            blinds.Move(step);
+                            return "";
+                        case "switch":
+                            bool status = bool.Parse(command[1]);
+                            if (status) blinds.Start(); else blinds.Stop();
+                            return "";
+                        case "update":
+                            blinds.Step = int.Parse(command[1]);
+                            return "";
+
+                    }
                 }
             }
             return "";
@@ -230,10 +327,10 @@ namespace HomeAutomation.Objects.Blinds
                 WebRelay relay = new WebRelay();
                 relay.Name = device.OpenDevice.Name;
                 relay.Description = device.OpenDevice.Description;
-                relay.Enabled = device.OpenDevice.Switch;
+                relay.Switch = device.OpenDevice.Switch;
                 relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
                 relay.Online = device.OpenDevice.Online;
-                relay.ID = device.ID;
+                relay.ID = device.OpenDevice.ID;
                 openDevice = relay;
 
                 HomeAutomationServer.server.Objects.Add(relay);
@@ -241,7 +338,7 @@ namespace HomeAutomation.Objects.Blinds
                 relay = new WebRelay();
                 relay.Name = device.CloseDevice.Name;
                 relay.Description = device.CloseDevice.Description;
-                relay.Enabled = device.CloseDevice.Switch;
+                relay.Switch = device.CloseDevice.Switch;
                 relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
                 relay.Online = device.CloseDevice.Online;
                 relay.ID = device.CloseDevice.ID;
@@ -256,7 +353,7 @@ namespace HomeAutomation.Objects.Blinds
                 relay.Name = device.OpenDevice.Name;
                 relay.Description = device.OpenDevice.Description;
                 relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-                relay.Enabled = device.OpenDevice.Switch;
+                relay.Switch = device.OpenDevice.Switch;
                 relay.ClientName = device.Client.Name;
                 relay.SetClient(device.Client);
                 openDevice = relay;
@@ -266,12 +363,13 @@ namespace HomeAutomation.Objects.Blinds
                 relay.Name = device.CloseDevice.Name;
                 relay.Description = device.CloseDevice.Description;
                 relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-                relay.Enabled = device.CloseDevice.Switch;
+                relay.Switch = device.CloseDevice.Switch;
                 relay.ClientName = device.Client.Name;
                 relay.SetClient(device.Client);
                 closeDevice = relay;
             }
-            Blinds blinds = new Blinds(device.Client, device.Name, openDevice, closeDevice, device.TotalSteps, device.Description, Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString()));
+            Client client = device.Client;
+            Blinds blinds = new Blinds(client, device.Name, openDevice, closeDevice, (int)device.TotalSteps, device.Description, Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString()));
 
             room.AddItem(blinds);
         }

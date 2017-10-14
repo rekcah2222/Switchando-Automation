@@ -1,4 +1,4 @@
-﻿using HomeAutomation.Objects;
+﻿/*using HomeAutomation.Objects;
 using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using System;
@@ -81,3 +81,4 @@ namespace HomeAutomation.Network.Interfaces.Voice
         }
     }
 }
+*/

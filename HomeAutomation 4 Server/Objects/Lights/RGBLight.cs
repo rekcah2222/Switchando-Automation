@@ -1,6 +1,7 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Dictionaries;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
@@ -29,7 +30,7 @@ namespace HomeAutomation.Objects.Lights
         Semaphore Semaphore;
 
         public string ObjectType = "LIGHT_GPIO_RGB";
-        public LightType LightType = LightType.RGB_LIGHT;
+        public string ObjectModel = "COLORABLE_LIGHT";
 
         public RGBLight()
         {
@@ -252,18 +253,11 @@ namespace HomeAutomation.Objects.Lights
         {
             if (!status)
             {
-                //PauseR = ValueR;
-                //PauseG = ValueG;
-                //PauseB = ValueB;
                 Set(0, 0, 0, 1000);
             }
             else
             {
                 Set(255, 255, 255, 1000);
-                /*if (PauseR == 0 && PauseG == 0 && PauseB == 0)
-                    Set(255, 255, 255, 1000);
-                else
-                    Set(PauseR, PauseG, PauseB, 1000);*/
             }
         }
 
@@ -280,10 +274,6 @@ namespace HomeAutomation.Objects.Lights
             return Switch;
         }
 
-        public LightType GetLightType()
-        {
-            return LightType.RGB_LIGHT;
-        }
         public string GetObjectType()
         {
             return "LIGHT_GPIO_RGB";
@@ -304,90 +294,200 @@ namespace HomeAutomation.Objects.Lights
         {
             return NetworkInterface.FromId("light_rgb");
         }
-        public static string SendParameters(string[] request)
+        private static RGBLight FindLightFromName(string name)
         {
             RGBLight light = null;
-            uint R = 0;
-            uint G = 0;
-            uint B = 0;
-            int dimmer = 0;
-            bool nolog = false;
-            string color = null;
-            uint dimm_percentage = 400;
-            string status = null;
-            foreach (string cmd in request)
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().ToLower().Equals(command[1].ToLower()))
-                            {
-                                light = (RGBLight)obj;
-                                break;
-                            }
-                            if (obj.GetFriendlyNames() == null) continue;
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                            {
-                                light = (RGBLight)obj;
-                                break;
-                            }
-                        }
-                        break;
-
-                    case "R":
-                        R = uint.Parse(command[1]);
-                        break;
-
-                    case "G":
-                        G = uint.Parse(command[1]);
-                        break;
-
-                    case "B":
-                        B = uint.Parse(command[1]);
-                        break;
-
-                    case "dimmer":
-                        dimmer = int.Parse(command[1]);
-                        break;
-
-                    case "color":
-                        color = command[1];
-                        break;
-
-                    case "percentage":
-                        dimm_percentage = uint.Parse(command[1]);
-                        break;
-
-                    case "nolog":
-                        nolog = true;
-                        break;
-
-                    case "switch":
-                        status = command[1];
-                        break;
+                    light = (RGBLight)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    light = (RGBLight)obj;
+                    break;
                 }
             }
-            if (status != null)
+            return light;
+        }
+        public static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("changeColor/RGB"))
             {
-                light.Pause(bool.Parse(status));
-                return "";
+                RGBLight light = null;
+                uint R = 0;
+                uint G = 0;
+                uint B = 0;
+                int dimmer = 0;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            light = FindLightFromName(command[1]);
+                            break;
+                        case "R":
+                            R = uint.Parse(command[1]);
+                            break;
+                        case "G":
+                            G = uint.Parse(command[1]);
+                            break;
+                        case "B":
+                            B = uint.Parse(command[1]);
+                            break;
+                        case "dimmer":
+                            dimmer = int.Parse(command[1]);
+                            break;
+                    }
+                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                light.Set(R, G, B, dimmer);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
-            if (color != null)
+            if (method.Equals("changeColor/name"))
             {
-                uint[] vls = ColorConverter.ConvertNameToRGB(color);
-                light.Set(vls[0], vls[1], vls[2], dimmer);
-                return "";
+                return "NOT IMPLEMENTED";
             }
-            if (dimm_percentage != 400)
+            if (method.Equals("switch"))
             {
+                RGBLight light = null;
+                bool status = false;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            light = FindLightFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                if (status) light.Start(); else light.Stop();
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+            if (method.Equals("dimm"))
+            {
+                RGBLight light = null;
+                byte dimm_percentage = 255;
+                int dimmer = 0;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            light = FindLightFromName(command[1]);
+                            break;
+                        case "percentage":
+                            dimm_percentage = byte.Parse(command[1]);
+                            break;
+                        case "dimmer":
+                            dimmer = int.Parse(command[1]);
+                            break;
+                    }
+                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
                 light.Dimm(dimm_percentage, dimmer);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            //OLD API
+            if (string.IsNullOrEmpty(method))
+            {
+                RGBLight light = null;
+                uint R = 0;
+                uint G = 0;
+                uint B = 0;
+                int dimmer = 0;
+                bool nolog = false;
+                string color = null;
+                uint dimm_percentage = 400;
+                string status = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().ToLower().Equals(command[1].ToLower()))
+                                {
+                                    light = (RGBLight)obj;
+                                    break;
+                                }
+                                if (obj.GetFriendlyNames() == null) continue;
+                                if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                                {
+                                    light = (RGBLight)obj;
+                                    break;
+                                }
+                            }
+                            break;
+
+                        case "R":
+                            R = uint.Parse(command[1]);
+                            break;
+
+                        case "G":
+                            G = uint.Parse(command[1]);
+                            break;
+
+                        case "B":
+                            B = uint.Parse(command[1]);
+                            break;
+
+                        case "dimmer":
+                            dimmer = int.Parse(command[1]);
+                            break;
+
+                        case "color":
+                            color = command[1];
+                            break;
+
+                        case "percentage":
+                            dimm_percentage = uint.Parse(command[1]);
+                            break;
+
+                        case "nolog":
+                            nolog = true;
+                            break;
+
+                        case "switch":
+                            status = command[1];
+                            break;
+                    }
+                }
+                if (status != null)
+                {
+                    light.Pause(bool.Parse(status));
+                    return "";
+                }
+                if (color != null)
+                {
+                    uint[] vls = ColorConverter.ConvertNameToRGB(color);
+                    light.Set(vls[0], vls[1], vls[2], dimmer);
+                    return "";
+                }
+                if (dimm_percentage != 400)
+                {
+                    light.Dimm(dimm_percentage, dimmer);
+                    return "";
+                }
+                light.Set(R, G, B, dimmer, nolog);
                 return "";
             }
-            light.Set(R, G, B, dimmer, nolog);
             return "";
         }
         void UploadValues(uint ValueR, uint ValueG, uint ValueB, int DimmerIntervals)

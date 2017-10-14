@@ -10,102 +10,129 @@ using System.Threading;
 
 namespace HomeAutomation.Rooms
 {
-    public class Room
+    public class DeviceGroup : ISwitch
     {
         public string Name;
         public string[] FriendlyNames;
-        public List<IObject> Objects;
+        public List<ISwitch> Objects;
         public bool Hidden;
-        public Room(string name, string[] friendlyNames, bool hidden)
+        public bool Switch;
+        public string ObjectType = "DEVICE_GROUP";
+        public string ObjectModel = "SWITCH";
+        public DeviceGroup(string name, string[] friendlyNames, bool hidden)
         {
             this.Hidden = hidden;
             this.Name = name;
             this.FriendlyNames = friendlyNames;
-            this.Objects = new List<IObject>();
-            HomeAutomationServer.server.Rooms.Add(this);
+            this.Objects = new List<ISwitch>();
+            //HomeAutomationServer.server.Objects.Add(this);
 
             foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
             {
-                if (netInt.Id.Equals("room")) return;
+                if (netInt.Id.Equals("device_group")) return;
             }
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("room", requestHandler);
+            NetworkInterface networkInterface = new NetworkInterface("device_group", requestHandler);
         }
-        public void AddItem(IObject homeAutomationObject)
+        public void AddItem(ISwitch homeAutomationObject)
         {
             this.Objects.Add(homeAutomationObject);
-        }
-        public void Switch(bool status)
-        {
-            foreach (IObject item in Objects)
+
+            foreach(ISwitch obj in Objects)
             {
-                if (item is ISwitch)
-                {
-                    if (status) ((ISwitch)item).Start(); else ((ISwitch)item).Stop();
-                }
-                /*//Console.WriteLine("switching_pre");
-                if (item.GetObjectType().Equals("LIGHT_GPIO_RGB"))
-                {
-                    //Console.WriteLine("switching");
-                    ((ILight)item).Pause(status);
-                    Thread.Sleep(1000);
-                 }
-                else if (item.GetObjectType().Equals("GENERIC_SWITCH"))
-                {
-                    if (status) ((ISwitch)item).Start(); else ((ISwitch)item).Stop();
-                }*/
+                
             }
+        }
+
+        public void SwitchGroup(bool status)
+        {
+            foreach (ISwitch item in Objects)
+            {
+                if (status) ((ISwitch)item).Start(); else ((ISwitch)item).Stop();
+                Thread.Sleep(200);
+            }
+        }
+        public void Start()
+        {
+            SwitchGroup(true);
+        }
+        public void Stop()
+        {
+            SwitchGroup(false);
+        }
+        public bool IsOn()
+        {
+            return Switch;
+        }
+        public string GetName()
+        {
+            return Name;
+        }
+        public NetworkInterface GetInterface()
+        {
+            return NetworkInterface.FromId("device_group");
+        }
+        public string GetObjectType()
+        {
+            return "DEVICE_GROUP";
+        }
+        public string GetObjectModel()
+        {
+            return "";
+        }
+        public string[] GetFriendlyNames()
+        {
+            return FriendlyNames;
         }
         public void Color(uint R, uint G, uint B, int dimmer)
         {
             HomeAutomationServer.server.Telegram.Log("Changing color of room `" + this.Name + "`.");
-            foreach (IObject item in Objects)
+            foreach (ISwitch item in Objects)
             {
-                if (item.GetObjectType().Equals("LIGHT_GPIO_RGB"))
+                if (item is IColorableLight)
                 {
-                        ((IColorableLight)item).Set(R, G, B, dimmer);
-                        Thread.Sleep(1000);
-                    /*else if (item.GetType().Equals(typeof(RGBLight)))
-                    {
-                        ((RGBLight)item).Set(R, G, B, dimmer);
-                    }*/
+                    ((IColorableLight)item).Set(R, G, B, dimmer);
+                    Thread.Sleep(200);
                 }
             }
         }
         public void Dimm(uint percentace, int dimmer)
         {
             HomeAutomationServer.server.Telegram.Log("Dimming room `" + this.Name + "` to `" + percentace + "%`" + "(" + dimmer + "ms).");
-            foreach (IObject item in Objects)
+            foreach (ISwitch item in Objects)
             {
-                if (item.GetObjectType().Equals("LIGHT_GPIO_RGB") || item.GetObjectType().Equals("LIGHT_GPIO_W"))
+                if (item is ILight)
                 {
                     ((ILight)item).Dimm(percentace, dimmer);
-                    Thread.Sleep(1000);
+                    Thread.Sleep(200);
                 }
             }
         }
-        private static Room FindRoomFromName(string name)
+        private static DeviceGroup FindGroupFromName(string name)
         {
-            Room room = null;
-            foreach (Room obj in HomeAutomationServer.server.Rooms)
+            DeviceGroup myobj = null;
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                if (obj.Name.ToLower().Equals(name.ToLower()))
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    room = (Room)obj;
+                    myobj = (DeviceGroup)obj;
+                    break;
                 }
-                if (Array.IndexOf(obj.FriendlyNames, name.ToLower()) > -1)
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
                 {
-                    room = (Room)obj;
+                    myobj = (DeviceGroup)obj;
+                    break;
                 }
             }
-            return room;
+            return myobj;
         }
         public static string SendParameters(string method, string[] request)
         {
             if (method.Equals("changeColor/RGB"))
             {
-                Room room = null;
+                DeviceGroup room = null;
                 uint R = 0;
                 uint G = 0;
                 uint B = 0;
@@ -117,7 +144,7 @@ namespace HomeAutomation.Rooms
                     switch (command[0])
                     {
                         case "objname":
-                            room = FindRoomFromName(command[1]);
+                            room = FindGroupFromName(command[1]);
                             break;
                         case "R":
                             R = uint.Parse(command[1]);
@@ -145,7 +172,7 @@ namespace HomeAutomation.Rooms
 
             if (method.Equals("switch"))
             {
-                Room room = null;
+                DeviceGroup room = null;
                 bool status = false;
 
                 foreach (string cmd in request)
@@ -154,7 +181,7 @@ namespace HomeAutomation.Rooms
                     switch (command[0])
                     {
                         case "objname":
-                            room = FindRoomFromName(command[1]);
+                            room = FindGroupFromName(command[1]);
                             break;
                         case "switch":
                             status = bool.Parse(command[1]);
@@ -162,12 +189,12 @@ namespace HomeAutomation.Rooms
                     }
                     if (room == null) return "ADD ERROR API";
                 }
-                room.Switch(status);
+                room.SwitchGroup(status);
                 return "";
             }
             if (method.Equals("dimm"))
             {
-                Room room = null;
+                DeviceGroup room = null;
                 byte dimm_percentage = 255;
                 int dimmer = 0;
 
@@ -177,7 +204,7 @@ namespace HomeAutomation.Rooms
                     switch (command[0])
                     {
                         case "objname":
-                            room = FindRoomFromName(command[1]);
+                            room = FindGroupFromName(command[1]);
                             break;
                         case "percentage":
                             dimm_percentage = byte.Parse(command[1]);
@@ -194,7 +221,7 @@ namespace HomeAutomation.Rooms
 
             if (string.IsNullOrEmpty(method))
             {
-                Room room = null;
+                DeviceGroup room = null;
                 uint R = 0;
                 uint G = 0;
                 uint B = 0;
@@ -210,15 +237,15 @@ namespace HomeAutomation.Rooms
                     switch (command[0])
                     {
                         case "objname":
-                            foreach (Room obj in HomeAutomationServer.server.Rooms)
+                            foreach (DeviceGroup obj in HomeAutomationServer.server.Objects)
                             {
                                 if (obj.Name.ToLower().Equals(command[1].ToLower()))
                                 {
-                                    room = (Room)obj;
+                                    room = (DeviceGroup)obj;
                                 }
                                 if (Array.IndexOf(obj.FriendlyNames, command[1].ToLower()) > -1)
                                 {
-                                    room = (Room)obj;
+                                    room = (DeviceGroup)obj;
                                 }
                             }
                             break;
@@ -254,7 +281,7 @@ namespace HomeAutomation.Rooms
                 }
                 if (status != null)
                 {
-                    room.Switch(bool.Parse(status));
+                    room.SwitchGroup(bool.Parse(status));
                     return "";
                 }
                 if (color != null)

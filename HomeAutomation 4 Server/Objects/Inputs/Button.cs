@@ -1,5 +1,6 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
 using HomeAutomationCore;
@@ -26,6 +27,7 @@ namespace HomeAutomation.Objects.Inputs
 
         public List<string> Commands;
         public List<string> Objects;
+        public List<string> Actions;
 
         public string ObjectType = "BUTTON";
         public Button(Client client, string name, bool isRemote)
@@ -38,6 +40,7 @@ namespace HomeAutomation.Objects.Inputs
 
             this.Commands = new List<string>();
             this.Objects = new List<string>();
+            this.Actions = new List<string>();
 
             if (isRemote)
             {
@@ -115,11 +118,11 @@ namespace HomeAutomation.Objects.Inputs
 
         public void AddCommand(string command)
         {
-            Commands.Add(command.Replace("=", ",,").Replace("&", ",,,"));
+            Commands.Add(command);
         }
         public void RemoveCommand(string command)
         {
-            Commands.Remove(command.Replace("=", ",,").Replace("&", ",,,"));
+            Commands.Remove(command);
         }
         public void AddObject(ISwitch obj)
         {
@@ -130,6 +133,14 @@ namespace HomeAutomation.Objects.Inputs
         {
             if (Objects.Contains(obj.GetName()))
                 Objects.Remove(obj.GetName());
+        }
+        public void AddAction(string action)
+        {
+            Actions.Add(action);
+        }
+        public void RemoveAction(string action)
+        {
+            Actions.Remove(action);
         }
         public void AddObject(string obj)
         {
@@ -165,22 +176,14 @@ namespace HomeAutomation.Objects.Inputs
                 {
                     var message = command.Replace("%EmulatedSwitchStatus%", EmulatedSwitchStatus.ToString());
                     message = message.Replace(",,,", "&");
-                    message = message.Replace(",,", "=");
-                    Console.WriteLine(message);
-                    string[] commands = message.Split('&');
-
-                    string[] icommand = commands[0].Split('=');
-                    if (icommand[0].Equals("interface"))
-                    {
-                        foreach (NetworkInterface networkInterface in HomeAutomationServer.server.NetworkInterfaces)
-                        {
-                            if (networkInterface.Id.Equals(icommand[1]))
-                            {
-                                Console.WriteLine(commands[2]);
-                                networkInterface.Run(commands);
-                            }
-                        }
-                    }
+                    message = message.Replace(",,", "=");                    
+                    
+                    //TODO CALL COMMAND EXECUTER
+                }
+                foreach (string actionRaw in Actions)
+                {
+                    ObjectInterfaces.Action action = ObjectInterfaces.Action.FromName(actionRaw);
+                    action.Run();
                 }
                 if (this.Objects.Count == 0) return;
                 List<ISwitch> objectsList = new List<ISwitch>();
@@ -236,28 +239,69 @@ namespace HomeAutomation.Objects.Inputs
         {
             return new string[0];
         }
-        public static string SendParameters(string[] request)
+        private static Button FindButtonFromName(string name)
         {
-            Button button = null;
-            foreach (string cmd in request)
+            Button myobj = null;
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().Equals(command[1]))
-                            {
-                                button = (Button)obj;
-                            }
-                        }
-                        break;
+                    myobj = (Button)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    myobj = (Button)obj;
+                    break;
+                }
+            }
+            return myobj;
+        }
+        public static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("click"))
+            {
+                Button button = null;
 
-                    case "switch":
-                        button.StatusChanged(true);
-                        break;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            button = FindButtonFromName(command[1]);
+                            break;
+                    }
+                }
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                button.StatusChanged(true);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (string.IsNullOrEmpty("method"))
+            {
+                Button button = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().Equals(command[1]))
+                                {
+                                    button = (Button)obj;
+                                }
+                            }
+                            break;
+
+                        case "switch":
+                            button.StatusChanged(true);
+                            break;
+                    }
                 }
             }
             return "";
@@ -272,6 +316,10 @@ namespace HomeAutomation.Objects.Inputs
             foreach (string objectName in device.Objects)
             {
                 button.AddObject(objectName);
+            }
+            foreach (string action in device.Actions)
+            {
+                button.AddAction(action);
             }
             button.ClientName = device.Client.Name;
             button.SetClient(device.Client);

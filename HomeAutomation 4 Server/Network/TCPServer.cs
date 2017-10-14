@@ -85,9 +85,13 @@ namespace HomeAutomation.Network
                         {
                             if (networkInterface.Id.Equals(icommand[1]))
                             {
-                                networkInterface.Run(commands);
+                                networkInterface.Run(null, commands);
                             }
                         }
+                    }
+                    else if (icommand[0].Equals("objname"))
+                    {
+                        //NetworkInterface.FromId("auto").Run(commands);
                     }
                 }
             }

@@ -7,20 +7,24 @@ namespace HomeAutomation.Network
     {
         public string Id;
 
-        public delegate string Delegate(string[] request);
+        public delegate string Delegate(string method, string[] request);
         Delegate Handler;
 
         public NetworkInterface(string id, Delegate handler)
         {
+            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
+            {
+                if (netInt.Id.Equals(id)) return;
+            }
             this.Id = id;
             this.Handler = handler;
             Console.WriteLine("registering " + id);
             HomeAutomationServer.server.NetworkInterfaces.Add(this);
         }
 
-        public string Run(string[] request)
+        public string Run(string method, string[] request)
         {
-            return this.Handler(request);
+            return this.Handler(method, request);
         }
 
         public static NetworkInterface FromId(string id)

@@ -92,12 +92,19 @@
     <Compile Include="HomeAutomationMain.cs" />
     <Compile Include="Logging\Logger.cs" />
     <Compile Include="Logging\Telegram\TelegramBot.cs" />
+    <Compile Include="Network\APIStatus\ReturnStatus.cs" />
     <Compile Include="Network\Interfaces\FindInterfaces.cs" />
     <Compile Include="Network\HTTPHandler.cs" />
     <Compile Include="Network\HTTPServer.cs" />
     <Compile Include="Network\Interfaces\VoiceInterface.cs" />
     <Compile Include="Network\NetworkInterfaces.cs" />
     <Compile Include="Network\TCPServer.cs" />
+    <Compile Include="ObjectInterface\Action.cs" />
+    <Compile Include="ObjectInterface\Condition.cs" />
+    <Compile Include="ObjectInterface\MethodInterface.cs" />
+    <Compile Include="ObjectInterface\MethodParameter.cs" />
+    <Compile Include="ObjectInterface\ObjectInterface.cs" />
+    <Compile Include="ObjectInterface\ObjectNetwork.cs" />
     <Compile Include="Objects\Alarm\Alarm.cs" />
     <Compile Include="Objects\Blinds\Blinds.cs" />
     <Compile Include="Objects\External\Plugins\IPlugin.cs" />
@@ -113,6 +120,7 @@
     <Compile Include="Objects\Switches\ISwitch.cs" />
     <Compile Include="Objects\Switches\Relay.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Rooms\Groups\DeviceGroup.cs" />
     <Compile Include="Rooms\Room.cs" />
     <Compile Include="Scenarios\Scenario.cs" />
     <Compile Include="Users\Identity.cs" />
@@ -138,6 +146,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Conditions\" />
     <Folder Include="Objects\Schedulers\" />
   </ItemGroup>
   <ItemGroup>

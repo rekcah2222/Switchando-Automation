@@ -18,27 +18,50 @@ namespace HomeAutomation.Network.Objects
             this.inter = new NetworkInterface("auto", Handler);
         }
 
-        public static string Handler(string[] request)
+        public static string Handler(string method, string[] request)
         {
             string identity = null;
             string objname = null;
+            string forward_method = "";
             NetworkInterface iobj = null;
 
-            foreach (string cmd in request)
+            if (string.IsNullOrEmpty(method))
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                foreach (string cmd in request)
                 {
-                    case "objname":
-                        objname = command[1];
-                        break;
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            objname = command[1];
+                            break;
 
-                    case "identity":
-                        identity = command[1];
-                        break;
+                        case "identity":
+                            identity = command[1];
+                            break;
+                    }
                 }
             }
+            else
+            {
+                string[] objnameMethodsRaw = method.Split('/');
+                objname = objnameMethodsRaw[0];
+                forward_method = method.Substring(objname.Length + 1);
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+
+                    switch (command[0])
+                    {
+                        case "identity":
+                            identity = command[1];
+                            break;
+                    }
+                }
+            }
+
             if (identity != null) objname = objname.Replace("my ", identity + " ");
             if (objname.StartsWith("the ")) objname = objname.Substring(4);
             foreach (Room room in HomeAutomationServer.server.Rooms)
@@ -83,11 +106,11 @@ namespace HomeAutomation.Network.Objects
                             break;
                     }
                 }
-                iobj.Run(finalRequest.ToArray());
+                iobj.Run(forward_method, finalRequest.ToArray());
             }
             else
             {
-                iobj.Run(request);
+                iobj.Run(forward_method, request);
             }
             return "";
         }

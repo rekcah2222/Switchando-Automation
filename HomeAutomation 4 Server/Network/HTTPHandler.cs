@@ -19,6 +19,25 @@ namespace HomeAutomation.Network
 
         public static string SendResponse(HttpListenerRequest request)
         {
+            
+            string url = request.Url.PathAndQuery.Substring(1);
+            //CHECK PASSWORD
+            string[] interfaceMethod = url.Split('/');
+            string netInterface = null;
+            string methodsRaw;
+            netInterface = interfaceMethod[0];
+            methodsRaw = url.Substring(netInterface.Length + 1);
+            string method = methodsRaw.Split('?')[0];
+            string[] parameters = methodsRaw.Split('?')[1].Split('&');
+
+            foreach (NetworkInterface networkInterface in HomeAutomationServer.server.NetworkInterfaces)
+            {
+                if (networkInterface.Id.Equals(netInterface))
+                {
+                    return networkInterface.Run(method, parameters);
+                }
+            }
+
             string message = request.Url.Query.Substring(1);
             message = HttpUtility.UrlDecode(message);
             Console.WriteLine(message);
@@ -60,9 +79,13 @@ namespace HomeAutomation.Network
                 {
                     if (networkInterface.Id.Equals(icommand[1]))
                     {
-                        return networkInterface.Run(commands);
+                        return networkInterface.Run(null, commands);
                     }
                 }
+            }
+            else if (icommand[0].Equals("objname"))
+            {
+                return NetworkInterface.FromId("auto").Run(null, commands);
             }
 
             return string.Format("<HTML><BODY>HomeAutomation 4 is running!<br />" + request.Url.Query + "<br />{0}</BODY></HTML>", DateTime.Now);

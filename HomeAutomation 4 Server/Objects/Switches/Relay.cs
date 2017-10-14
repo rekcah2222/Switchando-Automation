@@ -1,5 +1,7 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
+using HomeAutomation.ObjectInterfaces;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
 using HomeAutomationCore;
@@ -13,23 +15,23 @@ namespace HomeAutomation.Objects.Fans
     {
         Client Client;
         public string ClientName;
-        public uint Pin;
+        public uint Pin { get; set; }
         public string Name;
         public string[] FriendlyNames;
-        public bool Enabled;
+        public bool Switch;
         public string Description;
 
         public string ObjectType = "GENERIC_SWITCH";
+        public string ObjectModel = "SWITCH";
 
         public Relay()
         {
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("relay")) return;
-            }
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("relay", requestHandler);
+            NetworkInterface networkInterface = new NetworkInterface(ObjectType, requestHandler);
+
+            new ObjectInterface(null, "Pin", typeof(uint), "testing things");
+            new MethodInterface(NetworkInterface.FromId("relay"), "switch_TEST", "another testing thing");
         }
         public Relay(Client client, string name, uint pin, string description, string[] friendlyNames)
         {
@@ -42,13 +44,12 @@ namespace HomeAutomation.Objects.Fans
             this.Name = name;
             HomeAutomationServer.server.Objects.Add(this);
 
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("relay")) return;
-            }
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("relay", requestHandler);
+            NetworkInterface networkInterface = new NetworkInterface(ObjectType, requestHandler);
+
+            new ObjectInterface(null, "Pin", typeof(uint), "testing things");
+            new MethodInterface(NetworkInterface.FromId("relay"), "switch_TEST", "another testing thing");
         }
         public void SetClient(Client client)
         {
@@ -67,7 +68,7 @@ namespace HomeAutomation.Objects.Fans
             {
                 UploadValues(true);
             }
-            Enabled = true;
+            Switch = true;
         }
         public void Stop()
         {
@@ -81,11 +82,11 @@ namespace HomeAutomation.Objects.Fans
             {
                 UploadValues(false);
             }
-            Enabled = false;
+            Switch = false;
         }
         public bool IsOn()
         {
-            return Enabled;
+            return Switch;
         }
         public string GetName()
         {
@@ -111,40 +112,108 @@ namespace HomeAutomation.Objects.Fans
         {
             return NetworkInterface.FromId("relay");
         }
-        public static string SendParameters(string[] request)
+        private static Relay FindRelayFromName(string name)
         {
-            Relay fan = null;
-            foreach (string cmd in request)
+            Relay relay = null;
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().Equals(command[1]))
-                            {
-                                fan = (Relay)obj;
-                            }
-                            if (obj.GetFriendlyNames() == null) continue;
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                            {
-                                fan = (Relay)obj;
-                            }
-                        }
-                        break;
+                    relay = (Relay)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    relay = (Relay)obj;
+                    break;
+                }
+            }
+            return relay;
+        }
+        public static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("switch"))
+            {
+                Relay relay = null;
+                bool status = false;
 
-                    case "switch":
-                        if (command[1].ToLower().Equals("true"))
-                        {
-                            fan.Start();
-                        }
-                        else
-                        {
-                            fan.Stop();
-                        }
-                        break;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            relay = FindRelayFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                    if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                if (status) relay.Start(); else relay.Stop();
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (method.Equals("switch_TEST")) //REMOVE THIS PLS
+            {
+                Relay relay = null;
+                bool status = false;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            relay = FindRelayFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                    if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                if (status) relay.Start(); else relay.Stop();
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (string.IsNullOrEmpty(method))
+            {
+                Relay fan = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().Equals(command[1]))
+                                {
+                                    fan = (Relay)obj;
+                                }
+                                if (obj.GetFriendlyNames() == null) continue;
+                                if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                                {
+                                    fan = (Relay)obj;
+                                }
+                            }
+                            break;
+
+                        case "switch":
+                            if (command[1].ToLower().Equals("true"))
+                            {
+                                fan.Start();
+                            }
+                            else
+                            {
+                                fan.Stop();
+                            }
+                            break;
+                    }
                 }
             }
             return "";
@@ -156,7 +225,7 @@ namespace HomeAutomation.Objects.Fans
             relay.Name = device.Name;
             relay.Description = device.Description;
             relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-            relay.Enabled = device.Switch;
+            relay.Switch = device.Switch;
             relay.ClientName = device.Client.Name;
             relay.SetClient(device.Client);
 

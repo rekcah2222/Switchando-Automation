@@ -1,4 +1,5 @@
 ﻿using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.Inputs;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
@@ -15,13 +16,14 @@ namespace HomeAutomation.Objects.External
         public string Name;
         public string ID;
         public string[] FriendlyNames;
-        public bool Enabled;
+        public bool Switch;
         public string Description;
         public bool Online = false;
         public string Address;
         public string ClientName = "local";
 
         public string ObjectType = "EXTERNAL_SWITCH";
+        public string ObjectModel = "SWITCH";
 
         public WebRelay()
         {
@@ -68,7 +70,7 @@ namespace HomeAutomation.Objects.External
                 }
             }
 
-            Enabled = true;
+            Switch = true;
         }
         public void Stop()
         {
@@ -87,7 +89,7 @@ namespace HomeAutomation.Objects.External
                 }
             }
 
-            Enabled = false;
+            Switch = false;
         }
         public void AddButton(Room room)
         {
@@ -113,7 +115,7 @@ namespace HomeAutomation.Objects.External
         }
         public bool IsOn()
         {
-            return Enabled;
+            return Switch;
         }
         public string GetName()
         {
@@ -135,56 +137,136 @@ namespace HomeAutomation.Objects.External
         {
             return NetworkInterface.FromId("webrelay");
         }
-        public static string SendParameters(string[] request)
+        private static WebRelay FindWebRelayFromName(string name)
         {
-            WebRelay webrelay = null;
-            foreach (string cmd in request)
+            WebRelay relay = null;
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "online":
-                        string[] idip = command[1].Split('@');
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetObjectType() == "EXTERNAL_SWITCH")
+                    relay = (WebRelay)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    relay = (WebRelay)obj;
+                    break;
+                }
+            }
+            return relay;
+        }
+        public static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("handshake"))
+            {
+                WebRelay webrelay = null;
+                string address = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
                             {
-                                WebRelay relay = (WebRelay)obj;
-                                if (relay.ID.Equals(idip[0]))
+                                if (obj.GetObjectType() == "EXTERNAL_SWITCH")
                                 {
-                                    relay.Address = idip[1];
-                                    relay.Online = true;
+                                    WebRelay myobj = (WebRelay)obj;
+                                    if (myobj.ID.Equals(command[1]))
+                                    {
+                                        webrelay = myobj;
+                                    }
                                 }
                             }
-                        }
-                        break;
+                            break;
+                        case "address":
+                            address = command[1];
+                            break;
+                    }
+                }
+                if (webrelay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Id not found").Json();
+                if (address == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Address is null").Json();
 
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().Equals(command[1]))
-                            {
-                                webrelay = (WebRelay)obj;
-                            }
-                            if (obj.GetFriendlyNames() == null) continue;
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                            {
-                                webrelay = (WebRelay)obj;
-                            }
-                        }
-                        break;
+                webrelay.Address = address;
+                webrelay.Online = true;
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
 
-                    case "switch":
-                        if (command[1].ToLower().Equals("true"))
-                        {
-                            webrelay.Start();
-                        }
-                        else
-                        {
-                            webrelay.Stop();
-                        }
-                        break;
+            if (method.Equals("switch"))
+            {
+                WebRelay relay = null;
+                bool status = false;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            relay = FindWebRelayFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                    if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                if (status) relay.Start(); else relay.Stop();
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (string.IsNullOrEmpty(method))
+            {
+                WebRelay webrelay = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "online":
+                            string[] idip = command[1].Split('@');
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetObjectType() == "EXTERNAL_SWITCH")
+                                {
+                                    WebRelay relay = (WebRelay)obj;
+                                    if (relay.ID.Equals(idip[0]))
+                                    {
+                                        relay.Address = idip[1];
+                                        relay.Online = true;
+                                    }
+                                }
+                            }
+                            break;
+
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().Equals(command[1]))
+                                {
+                                    webrelay = (WebRelay)obj;
+                                }
+                                if (obj.GetFriendlyNames() == null) continue;
+                                if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                                {
+                                    webrelay = (WebRelay)obj;
+                                }
+                            }
+                            break;
+
+                        case "switch":
+                            if (command[1].ToLower().Equals("true"))
+                            {
+                                webrelay.Start();
+                            }
+                            else
+                            {
+                                webrelay.Stop();
+                            }
+                            break;
+                    }
                 }
             }
             return "";
@@ -194,7 +276,7 @@ namespace HomeAutomation.Objects.External
             WebRelay relay = new WebRelay();
             relay.Name = device.Name;
             relay.Description = device.Description;
-            relay.Enabled = device.Switch;
+            relay.Switch = device.Switch;
             relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
             relay.Online = device.Online;
             relay.ID = device.ID;

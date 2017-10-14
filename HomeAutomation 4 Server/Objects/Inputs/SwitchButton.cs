@@ -1,5 +1,6 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
 using HomeAutomationCore;
@@ -216,42 +217,87 @@ namespace HomeAutomation.Objects.Inputs
         {
             return new string[0];
         }
-        public static string SendParameters(string[] request)
+        private static SwitchButton FindSwitchButtonFromName(string name)
         {
-            SwitchButton button = null;
-            foreach (string cmd in request)
+            SwitchButton myobj = null;
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().Equals(command[1]))
-                            {
-                                button = (SwitchButton)obj;
-                            }
-                        }
-                        break;
+                    myobj = (SwitchButton)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    myobj = (SwitchButton)obj;
+                    break;
+                }
+            }
+            return myobj;
+        }
+        public static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("click"))
+            {
+                SwitchButton switch_button = null;
+                bool status = false;
 
-                    case "switch":
-                        if (command[1].ToLower().Equals("true"))
-                        {
-                            button.StatusChanged(true);
-                        }
-                        else
-                        {
-                            button.StatusChanged(false);
-                        }
-                        break;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            switch_button = FindSwitchButtonFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                }
+                if (switch_button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                switch_button.StatusChanged(status);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (string.IsNullOrEmpty(method))
+            {
+                SwitchButton button = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().Equals(command[1]))
+                                {
+                                    button = (SwitchButton)obj;
+                                }
+                            }
+                            break;
+
+                        case "switch":
+                            if (command[1].ToLower().Equals("true"))
+                            {
+                                button.StatusChanged(true);
+                            }
+                            else
+                            {
+                                button.StatusChanged(false);
+                            }
+                            break;
+                    }
                 }
             }
             return "";
         }
         public static void Setup(Room room, dynamic device)
         {
-            SwitchButton button = new SwitchButton(device.Client, device.Name, device.Pin, device.IsRemote);
+            SwitchButton button = new SwitchButton(device.Client, device.Name, (uint)device.Pin, device.IsRemote);
             foreach (string command in device.CommandsOn)
             {
                 button.AddCommand(command, true);

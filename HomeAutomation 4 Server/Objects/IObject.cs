@@ -1,4 +1,5 @@
 ﻿using HomeAutomation.Network;
+using HomeAutomation.ObjectInterfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,16 +14,5 @@ namespace HomeAutomation.Objects
         string GetObjectType();
         NetworkInterface GetInterface();
         string[] GetFriendlyNames();
-    }
-    public enum HomeAutomationObjectBackup
-    {
-        LIGHT,
-        FAN,
-        GENERIC_SWITCH,
-        ROOM,
-        BUTTON,
-        SWITCH_BUTTON,
-        EXTERNAL_SWITCH,
-        BLINDS
     }
 }

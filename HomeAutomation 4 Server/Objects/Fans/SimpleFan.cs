@@ -1,4 +1,4 @@
-﻿using Homeautomation.GPIO;
+﻿/*using Homeautomation.GPIO;
 using HomeAutomation.Network;
 using HomeAutomation.Objects.Switches;
 using HomeAutomationCore;
@@ -23,6 +23,7 @@ namespace HomeAutomation.Objects.Fans
         public string Description;
 
         public string ObjectType = "SIMPLE_FAN";
+        public string ObjectModel = "FAN";
 
         public SimpleFan()
         {
@@ -153,4 +154,4 @@ namespace HomeAutomation.Objects.Fans
             return "";
         }
     }
-}
+}*/

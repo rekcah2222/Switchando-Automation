@@ -32,88 +32,172 @@ namespace HomeAutomation.ConfigRetriver
             requestHandler = SendParameters;
             NetworkInterface networkInterface = new NetworkInterface("configuration", requestHandler);
         }
-        public static string SendParameters(string[] request)
+        public static string SendParameters(string method, string[] request)
         {
-            foreach (string cmd in request)
+            foreach (Configuration config in HomeAutomationServer.server.Configs)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface"))
+                if (method.StartsWith("configuration/" + config.Id))
                 {
-                    foreach(Configuration config in HomeAutomationServer.server.Configs)
+                    return config.Run(request);
+                }
+            }
+
+            switch (method)
+            {
+                case "addroom":
+                    CreateRoom(request);
+                    break;
+
+                case "removeroom":
+                    RemoveRoom(request);
+                    break;
+
+                case "removeobject":
+                    RemoveObject(request);
+                    break;
+
+                case "removeclient":
+                    RemoveClient(request);
+                    break;
+
+                case "addclient":
+                    CreateClient(request);
+                    break;
+
+                case "addlightrgb":
+                    CreateLightRGB(request);
+                    break;
+
+                case "addlightw":
+                    CreateLightW(request);
+                    break;
+
+                case "addblinds":
+                    CreateBlinds(request);
+                    break;
+
+                case "addsimplefan":
+                    //CreateSimpleFan(request);
+                    break;
+
+                case "addrelay":
+                    CreateRelay(request);
+                    break;
+
+                case "addwebrelay":
+                    CreateWebRelay(request);
+                    break;
+
+                case "addbutton":
+                    CreateButton(request);
+                    break;
+
+                case "buttonaddcommand":
+                    ButtonAddCommand(request);
+                    break;
+
+                case "buttonaddobject":
+                    ButtonAddObject(request);
+                    break;
+
+                case "addswitchbutton":
+                    CreateSwitchButton(request);
+                    break;
+
+                case "switchbuttonaddcommand":
+                    SwitchButtonAddCommand(request);
+                    break;
+                case "switchbuttoaddobject":
+                    SwitchButtonAddObject(request);
+                    break;
+
+                case "updatefile":
+                    break;
+            }
+
+            if (string.IsNullOrEmpty(method))
+            {
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface"))
                     {
-                        if (command[1].StartsWith("configuration/" + config.Id))
+                        foreach (Configuration config in HomeAutomationServer.server.Configs)
                         {
-                            return config.Run(request);
+                            if (command[1].StartsWith("configuration/" + config.Id))
+                            {
+                                return config.Run(request);
+                            }
                         }
                     }
-                }
-                switch (command[0])
-                {
-                    case "addroom":
-                        CreateRoom(request);
-                        break;
+                    switch (command[0])
+                    {
+                        case "addroom":
+                            CreateRoom(request);
+                            break;
 
-                    case "removeroom":
-                        RemoveRoom(request);
-                        break;
-                    case "removeobject":
-                        RemoveObject(request);
-                        break;
-                    case "removeclient":
-                        RemoveClient(request);
-                        break;
+                        case "removeroom":
+                            RemoveRoom(request);
+                            break;
+                        case "removeobject":
+                            RemoveObject(request);
+                            break;
+                        case "removeclient":
+                            RemoveClient(request);
+                            break;
 
-                    case "addclient":
-                        CreateClient(request);
-                        break;
+                        case "addclient":
+                            CreateClient(request);
+                            break;
 
-                    case "addlightrgb":
-                        CreateLightRGB(request);
-                        break;
+                        case "addlightrgb":
+                            CreateLightRGB(request);
+                            break;
 
-                    case "addlightw":
-                        CreateLightW(request);
-                        break;
-                    case "addblinds":
-                        CreateBlinds(request);
-                        break;
+                        case "addlightw":
+                            CreateLightW(request);
+                            break;
+                        case "addblinds":
+                            CreateBlinds(request);
+                            break;
 
-                    case "addsimplefan":
-                        CreateSimpleFan(request);
-                        break;
+                        case "addsimplefan":
+                            //CreateSimpleFan(request);
+                            break;
 
-                    case "addrelay":
-                        CreateRelay(request);
-                        break;
+                        case "addrelay":
+                            CreateRelay(request);
+                            break;
 
-                    case "addwebrelay":
-                        CreateWebRelay(request);
-                        break;
+                        case "addwebrelay":
+                            CreateWebRelay(request);
+                            break;
 
-                    case "addbutton":
-                        CreateButton(request);
-                        break;
+                        case "addbutton":
+                            CreateButton(request);
+                            break;
 
-                    case "buttonaddcommand":
-                        ButtonAddCommand(request);
-                        break;
-                    case "buttonaddobject":
-                        ButtonAddObject(request);
-                        break;
+                        case "buttonaddcommand":
+                            ButtonAddCommand(request);
+                            break;
+                        case "buttonaddobject":
+                            ButtonAddObject(request);
+                            break;
 
-                    case "addswitchbutton":
-                        CreateSwitchButton(request);
-                        break;
+                        case "addswitchbutton":
+                            CreateSwitchButton(request);
+                            break;
 
-                    case "switchbuttonaddcommand":
-                        SwitchButtonAddCommand(request);
-                        break;
-                    case "switchbuttoaddobject":
-                        SwitchButtonAddObject(request);
-                        break;
+                        case "switchbuttonaddcommand":
+                            SwitchButtonAddCommand(request);
+                            break;
+                        case "switchbuttoaddobject":
+                            SwitchButtonAddObject(request);
+                            break;
 
-                    case "updatefile":
-                        break;
+                        case "updatefile":
+                            break;
+                    }
                 }
             }
             string json = JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms);
@@ -251,6 +335,21 @@ namespace HomeAutomation.ConfigRetriver
                         hiddenRoom = bool.Parse(hiddenroomString);
                         break;
                 }
+            }
+            Room editRoom = null;
+            foreach (Room area in HomeAutomationServer.server.Rooms)
+            {
+                if (area.Name.ToLower().Equals(name.ToLower()))
+                {
+                    editRoom = area;
+                }
+            }
+            if (editRoom != null)
+            {
+                editRoom.Name = name;
+                if (friendlyNames != null) editRoom.FriendlyNames = friendlyNames;
+                editRoom.Hidden = hiddenRoom;
+                return;
             }
             Room room = new Room(name, friendlyNames, hiddenRoom);
         }
@@ -594,7 +693,7 @@ namespace HomeAutomation.ConfigRetriver
                 room.AddItem(blinds);
             }
         }
-        private static void CreateSimpleFan(string[] data)
+        /*private static void CreateSimpleFan(string[] data)
         {
             string name = null;
             string[] friendlyNames = null;
@@ -654,7 +753,7 @@ namespace HomeAutomation.ConfigRetriver
             if (room == null) return;
             SimpleFan relay = new SimpleFan(client, name, pin, description, friendlyNames);
             room.AddItem(relay);
-        }
+        }*/
         private static void CreateButton(string[] data)
         {
             string name = null;

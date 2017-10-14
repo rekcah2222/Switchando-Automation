@@ -1,5 +1,6 @@
 ﻿using Homeautomation.GPIO;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Rooms;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
@@ -18,7 +19,6 @@ namespace HomeAutomation.Objects.Lights
 
         public uint Pin;
         public uint Value, Brightness;
-        public uint PauseValue;
         public bool Switch;
 
         public string Name;
@@ -26,7 +26,7 @@ namespace HomeAutomation.Objects.Lights
         public string Description;
 
         public string ObjectType = "LIGHT_GPIO_W";
-        //public LightType LightType = LightType.W_LIGHT;
+        public string ObjectModel = "DIMMABLE_LIGHT";
 
         public WLight()
         {
@@ -79,7 +79,7 @@ namespace HomeAutomation.Objects.Lights
             this.Brightness = 100;
             if (value == this.Value) return;
 
-            if (value == 0) Switch = true; else Switch = false;
+            if (value == 0) Switch = false; else Switch = true;
 
             if (!Client.Name.Equals("local"))
             {
@@ -100,7 +100,6 @@ namespace HomeAutomation.Objects.Lights
             values[1] = value;
             values[2] = this.Pin;
             values[3] = ((dimmer / (((int)this.Value) - (int)value)));
-            //if (((this.Value * 255) - (value * 255)) == 0) values[3] = 0;
             DimmerThread(values);
 
             this.Value = value;
@@ -170,25 +169,12 @@ namespace HomeAutomation.Objects.Lights
         {
             if (Switch)
             {
-                //PauseValue = Value;
                 Set(0, 1000);
                 return;
             }
             else
             {
                 Set(255, 1000);
-                /*if (PauseValue == 0)
-                {
-                    
-                    Set(255, 1000);
-                    return;
-                }
-                else
-                {
-                    
-                    Set(PauseValue, 1000);
-                    return;
-                }*/
             }
         }
 
@@ -196,25 +182,12 @@ namespace HomeAutomation.Objects.Lights
         {
             if (!status)
             {
-                //PauseValue = Value;
                 Set(0, 1000);
                 return;
             }
             else
             {
                 Set(255, 1000);
-                /*if (PauseValue == 0)
-                {
-                    
-                    Set(255, 1000);
-                    return;
-                }
-                else
-                {
-                    
-                    Set(PauseValue, 1000);
-                    return;
-                }*/
             }
         }
         public void Start()
@@ -229,11 +202,7 @@ namespace HomeAutomation.Objects.Lights
         {
             return Switch;
         }
-        public LightType GetLightType()
-        {
-            return LightType.W_LIGHT;
-        }
-        public new string GetObjectType()
+        public string GetObjectType()
         {
             return "LIGHT";
         }
@@ -257,69 +226,170 @@ namespace HomeAutomation.Objects.Lights
         {
             Client.Sendata("interface=light_w&objname=" + this.Name + "&W=" + Value + "&dimmer=" + DimmerIntervals);
         }
-        public static string SendParameters(string[] request)
+        private static WLight FindLightFromName(string name)
         {
             WLight light = null;
-            uint Value = 0;
-            int dimmer = 0;
-            uint dimm_percentage = 400;
-            bool nolog = false;
-            string status = null;
-            foreach (string cmd in request)
+            foreach (IObject obj in HomeAutomationServer.server.Objects)
             {
-                string[] command = cmd.Split('=');
-                if (command[0].Equals("interface")) continue;
-                
-                switch (command[0])
+                if (obj.GetName().ToLower().Equals(name.ToLower()))
                 {
-                    case "objname":
-                        foreach (IObject obj in HomeAutomationServer.server.Objects)
-                        {
-                            if (obj.GetName().Equals(command[1]))
-                            {
-                                light = (WLight)obj;
-                            }
-                            if (obj.GetFriendlyNames() == null) continue;
-                            if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                            {
-                                light = (WLight)obj;
-                            }
-                        }
-                        break;
-
-                    case "W":
-                        Value = uint.Parse(command[1]);
-                        break;
-
-                    case "dimmer":
-                        dimmer = int.Parse(command[1]);
-                        break;
-
-                    case "percentage":
-                        dimm_percentage = uint.Parse(command[1]);
-                        break;
-
-                    case "nolog":
-                        nolog = true;
-                        break;
-
-                    case "switch":
-                        status = command[1];
-                        break;
+                    light = (WLight)obj;
+                    break;
+                }
+                if (obj.GetFriendlyNames() == null) continue;
+                if (Array.IndexOf(obj.GetFriendlyNames(), name.ToLower()) > -1)
+                {
+                    light = (WLight)obj;
+                    break;
                 }
             }
-            if (status != null)
+            return light;
+        }
+        public static string SendParameters(string method, string[] request)
+        {
+            if (method.Equals("changeValue"))
             {
+                WLight light = null;
+                uint pwm = 0;
+                int dimmer = 0;
 
-                light.Pause(bool.Parse(status));
-                return "";
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            light = FindLightFromName(command[1]);
+                            break;
+                        case "W":
+                            pwm = uint.Parse(command[1]);
+                            break;
+                        case "value":
+                            pwm = uint.Parse(command[1]);
+                            break;
+                        case "dimmer":
+                            dimmer = int.Parse(command[1]);
+                            break;
+                    }
+                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                light.Set(pwm, dimmer);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
-            if (dimm_percentage != 400)
+            if (method.Equals("switch"))
             {
+                WLight light = null;
+                bool status = false;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            light = FindLightFromName(command[1]);
+                            break;
+                        case "switch":
+                            status = bool.Parse(command[1]);
+                            break;
+                    }
+                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
+                if (status) light.Start(); else light.Stop();
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+            if (method.Equals("dimm"))
+            {
+                WLight light = null;
+                byte dimm_percentage = 255;
+                int dimmer = 0;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    switch (command[0])
+                    {
+                        case "objname":
+                            light = FindLightFromName(command[1]);
+                            break;
+                        case "percentage":
+                            dimm_percentage = byte.Parse(command[1]);
+                            break;
+                        case "dimmer":
+                            dimmer = int.Parse(command[1]);
+                            break;
+                    }
+                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                }
                 light.Dimm(dimm_percentage, dimmer);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+
+            if (string.IsNullOrEmpty(method))
+            {
+                WLight light = null;
+                uint Value = 0;
+                int dimmer = 0;
+                uint dimm_percentage = 400;
+                bool nolog = false;
+                string status = null;
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+
+                    switch (command[0])
+                    {
+                        case "objname":
+                            foreach (IObject obj in HomeAutomationServer.server.Objects)
+                            {
+                                if (obj.GetName().Equals(command[1]))
+                                {
+                                    light = (WLight)obj;
+                                }
+                                if (obj.GetFriendlyNames() == null) continue;
+                                if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
+                                {
+                                    light = (WLight)obj;
+                                }
+                            }
+                            break;
+
+                        case "W":
+                            Value = uint.Parse(command[1]);
+                            break;
+
+                        case "dimmer":
+                            dimmer = int.Parse(command[1]);
+                            break;
+
+                        case "percentage":
+                            dimm_percentage = uint.Parse(command[1]);
+                            break;
+
+                        case "nolog":
+                            nolog = true;
+                            break;
+
+                        case "switch":
+                            status = command[1];
+                            break;
+                    }
+                }
+                if (status != null)
+                {
+
+                    light.Pause(bool.Parse(status));
+                    return "";
+                }
+                if (dimm_percentage != 400)
+                {
+                    light.Dimm(dimm_percentage, dimmer);
+                    return "";
+                }
+                light.Set(Value, dimmer, nolog);
                 return "";
             }
-            light.Set(Value, dimmer, nolog);
             return "";
         }
         public void Init()

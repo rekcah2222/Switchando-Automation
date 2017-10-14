@@ -2,15 +2,12 @@
 using HomeAutomation.ConfigRetriver;
 using HomeAutomation.Logging.Telegram;
 using HomeAutomation.Network;
+using HomeAutomation.ObjectInterfaces;
 using HomeAutomation.Objects;
 using HomeAutomation.Rooms;
 using HomeAutomation.Scenarios;
 using HomeAutomation.Users;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HomeAutomationCore
 {
@@ -29,6 +26,8 @@ namespace HomeAutomationCore
         public List<Scenario> Scenarios { get; set; }
 
         public TelegramBot Telegram { get; set; }
+        
+        public ObjectNetwork ObjectNetwork { get; set; }
 
         public string House;
         private string Password;
@@ -47,6 +46,11 @@ namespace HomeAutomationCore
             NetworkInterfaces = new List<NetworkInterface>();
             Setups = new List<SetupTool>();
             Configs = new List<Configuration>();
+
+            ObjectNetwork = new ObjectNetwork();
+            ObjectNetwork.MethodInterfaces = new List<MethodInterface>();
+            ObjectNetwork.ObjectInterfaces = new List<ObjectInterface>();
+
         }
         public string GetPassword()
         {
