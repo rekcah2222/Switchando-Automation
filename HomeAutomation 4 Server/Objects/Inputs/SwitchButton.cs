@@ -27,6 +27,9 @@ namespace HomeAutomation.Objects.Inputs
         public List<string> CommandsOn;
         public List<string> CommandsOff;
 
+        public List<string> ActionsOn;
+        public List<string> ActionsOff;
+
         public List<string> Objects;
 
         public string ObjectType = "SWITCH_BUTTON";
@@ -44,6 +47,10 @@ namespace HomeAutomation.Objects.Inputs
 
             this.CommandsOn = new List<string>();
             this.CommandsOff = new List<string>();
+
+            this.ActionsOn = new List<string>();
+            this.ActionsOff = new List<string>();
+
             this.Objects = new List<string>();
 
             if (!isRemote)
@@ -80,22 +87,44 @@ namespace HomeAutomation.Objects.Inputs
         {
             if (onoff)
             {
-                CommandsOn.Add(command.Replace("=", ",,").Replace("&", ",,,"));
+                CommandsOn.Add(command);
             }
             else
             {
-                CommandsOff.Add(command.Replace("=", ",,").Replace("&", ",,,"));
+                CommandsOff.Add(command);
             }
         }
         public void RemoveCommand(string command, bool onoff)
         {
             if (onoff)
             {
-                CommandsOn.Remove(command.Replace("=", ",,").Replace("&", ",,,"));
+                CommandsOn.Remove(command);
             }
             else
             {
-                CommandsOff.Remove(command.Replace("=", ",,").Replace("&", ",,,"));
+                CommandsOff.Remove(command);
+            }
+        }
+        public void AddAction(string action, bool onoff)
+        {
+            if (onoff)
+            {
+                ActionsOn.Add(action);
+            }
+            else
+            {
+                ActionsOff.Add(action);
+            }
+        }
+        public void RemoveAction(string command, bool onoff)
+        {
+            if (onoff)
+            {
+                ActionsOn.Remove(command);
+            }
+            else
+            {
+                ActionsOff.Remove(command);
             }
         }
         public void RemoveObject(ISwitch obj)
@@ -138,7 +167,7 @@ namespace HomeAutomation.Objects.Inputs
             {
                 foreach (string command in CommandsOn)
                 {
-                    var message = command.Replace(",,,", "&");
+                    /*var message = command.Replace(",,,", "&");
                     message = message.Replace(",,", "=");
                     string[] commands = message.Split('&');
 
@@ -152,7 +181,13 @@ namespace HomeAutomation.Objects.Inputs
                                 networkInterface.Run(commands);
                             }
                         }
-                    }
+                    }*/
+                    //TODO execute command
+                }
+                foreach (string actionRaw in ActionsOn)
+                {
+                    ObjectInterfaces.Action action = ObjectInterfaces.Action.FromName(actionRaw);
+                    action.Run();
                 }
                 List<ISwitch> objectsList = new List<ISwitch>();
                 foreach (IObject iobj in HomeAutomationServer.server.Objects)
@@ -171,7 +206,7 @@ namespace HomeAutomation.Objects.Inputs
             {
                 foreach (string command in CommandsOff)
                 {
-                    var message = command.Replace(",,,", "&");
+                    /*var message = command.Replace(",,,", "&");
                     message = message.Replace(",,", "=");
                     string[] commands = message.Split('&');
 
@@ -185,7 +220,13 @@ namespace HomeAutomation.Objects.Inputs
                                 networkInterface.Run(commands);
                             }
                         }
-                    }
+                    }*/
+                    //TODO execute command
+                }
+                foreach (string actionRaw in ActionsOff)
+                {
+                    ObjectInterfaces.Action action = ObjectInterfaces.Action.FromName(actionRaw);
+                    action.Run();
                 }
                 List<ISwitch> objectsList = new List<ISwitch>();
                 foreach (IObject iobj in HomeAutomationServer.server.Objects)
@@ -261,6 +302,233 @@ namespace HomeAutomation.Objects.Inputs
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
 
+            if (method.Equals("createSwitchButton"))
+            {
+                string name = null;
+                uint pin = 0;
+                Client client = null;
+                bool isRemote = false;
+
+                Room room = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "pin":
+                            string pinStr = command[1];
+                            pin = uint.Parse(pinStr);
+                            break;
+
+                        case "client":
+                            string clientName = command[1];
+                            foreach (Client clnt in HomeAutomationServer.server.Clients)
+                            {
+                                if (clnt.Name.Equals(clientName))
+                                {
+                                    client = clnt;
+                                }
+                            }
+                            if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Raspi-Client not found").Json();
+                            break;
+
+                        case "room":
+                            foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                            {
+                                if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                                {
+                                    room = stanza;
+                                }
+                            }
+                            break;
+
+                        case "remote":
+                            isRemote = bool.Parse(command[1]);
+                            break;
+                    }
+                }
+                if (room == null) if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
+                SwitchButton button = new SwitchButton(client, name, pin, isRemote);
+                room.AddItem(button);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.button = button;
+                return data.Json();
+            }
+            if (method.Equals("addObject"))
+            {
+                string name = null;
+                string obj = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "device":
+                            obj = command[1];
+                            break;
+                    }
+                }
+                if (name == null || obj == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+
+                SwitchButton button = null;
+                ISwitch device = null;
+
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj is ISwitch)
+                    {
+                        if (iobj.GetName().Equals(obj))
+                        {
+                            device = (ISwitch)iobj;
+                        }
+                    }
+                    if (iobj.GetObjectType() == "SWITCH_BUTTON")
+                    {
+                        if (iobj.GetName().Equals(name))
+                        {
+                            button = (SwitchButton)iobj;
+                        }
+                    }
+                }
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, name + " not found").Json();
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, obj + " not found").Json();
+
+                button.AddObject(device);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.button = button;
+                return data.Json();
+            }
+            if (method.Equals("addAction"))
+            {
+                string name = null;
+                string objOn = null;
+                string objOff = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "action_on":
+                            objOn = command[1];
+                            break;
+                        case "action_off":
+                            objOff = command[1];
+                            break;
+                    }
+                }
+                if (name == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                if (objOff == null && objOff == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                //if (objOff == null && objOff == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+
+                SwitchButton button = null;
+                ObjectInterfaces.Action actionOn = null;
+                ObjectInterfaces.Action actionOff = null;
+                bool on = false;
+                bool off = false;
+
+                foreach (ObjectInterfaces.Action iobj in HomeAutomationServer.server.ObjectNetwork.Actions)
+                {
+                    if (objOn != null)
+                    {
+                        if (iobj.Name.Equals(objOn))
+                        {
+                            actionOn = iobj;
+                            on = true;
+                        }
+                    }
+                    if (objOff != null)
+                    {
+                        if (iobj.Name.Equals(objOff))
+                        {
+                            actionOff = iobj;
+                            off = false;
+                        }
+                    }
+                }
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj.GetObjectType() == "SWITCH_BUTTON")
+                    {
+                        if (iobj.GetName().Equals(name))
+                        {
+                            button = (SwitchButton)iobj;
+                        }
+                    }
+                }
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, name + " not found").Json();
+                if (on && actionOn == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, objOn + " not found").Json();
+                if (off && actionOff == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, objOff + " not found").Json();
+
+                if (on) button.AddAction(actionOn.Name, true);
+                if (off) button.AddAction(actionOn.Name, true);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.button = button;
+                return data.Json();
+            }
+            if (method.Equals("addCommand"))
+            {
+                string name = null;
+                string cmdOn = null;
+                string cmdOff = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "command_on":
+                            cmdOn = command[1];
+                            break;
+                        case "command_off":
+                            cmdOff = command[1];
+                            break;
+                    }
+                }
+                if (cmdOn == null && cmdOff == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj.GetObjectType() == "SWITCH_BUTTON")
+                    {
+                        if (iobj.GetName().Equals(name))
+                        {
+                            SwitchButton button = (SwitchButton)iobj;
+                            if (cmdOn != null) button.AddCommand(cmdOn, true);
+                            if (cmdOff != null) button.AddCommand(cmdOff, true);
+
+                            ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                            data.Object.button = button;
+                            return data.Json();
+                        }
+                    }
+                }
+                return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, name + " not found").Json();
+            }
+
+
             if (string.IsNullOrEmpty(method))
             {
                 SwitchButton button = null;
@@ -309,6 +577,14 @@ namespace HomeAutomation.Objects.Inputs
             foreach (string objectName in device.Objects)
             {
                 button.AddObject(objectName);
+            }
+            foreach (string action in device.ActionsOn)
+            {
+                button.AddAction(action, true);
+            }
+            foreach (string action in device.ActionsOff)
+            {
+                button.AddAction(action, false);
             }
             button.ClientName = device.Client.Name;
             button.SetClient(device.Client);

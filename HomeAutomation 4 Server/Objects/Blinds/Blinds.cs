@@ -271,7 +271,103 @@ namespace HomeAutomation.Objects.Blinds
 
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
+            if (method.Equals("createNewBlinds"))
+            {
+                string name = null;
+                string[] friendlyNames = null;
+                string description = null;
+                Client client = null;
+                Room room = null;
 
+                uint openPin = 0;
+                uint closePin = 0;
+
+                byte totalsteps = 0;
+
+                string webrelayOpenId = null;
+                string webrelayCloseId = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "addblinds":
+                            name = command[1];
+                            break;
+                        case "description":
+                            description = command[1];
+                            break;
+                        case "setfriendlynames":
+                            string names = command[1];
+                            friendlyNames = names.Split(',');
+                            break;
+
+                        case "openpin":
+                            string pinStr = command[1];
+                            openPin = uint.Parse(pinStr);
+                            break;
+                        case "closepin":
+                            pinStr = command[1];
+                            closePin = uint.Parse(pinStr);
+                            break;
+                        case "webrelayopenid":
+                            webrelayOpenId = command[1];
+                            break;
+                        case "webrelaycloseid":
+                            webrelayCloseId = command[1];
+                            break;
+
+                        case "totalsteps":
+                            totalsteps = byte.Parse(command[1]);
+                            break;
+
+                        case "client":
+                            string clientName = command[1];
+                            foreach (Client clnt in HomeAutomationServer.server.Clients)
+                            {
+                                if (clnt.Name.Equals(clientName))
+                                {
+                                    client = clnt;
+                                }
+                            }
+                            if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Raspi-Client not found").Json();
+                            break;
+
+                        case "room":
+                            foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                            {
+                                if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                                {
+                                    room = stanza;
+                                }
+                            }
+                            break;
+                    }
+                }
+                if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
+                if (openPin == closePin && webrelayOpenId != null && webrelayCloseId != null)
+                {
+                    WebRelay openRelay = new WebRelay(name + "_openrelay", webrelayOpenId, "", new string[0]);
+                    WebRelay closeRelay = new WebRelay(name + "_closerelay", webrelayCloseId, "", new string[0]);
+                    Blinds blinds = new Blinds(client, name, openRelay, closeRelay, totalsteps, description, friendlyNames);
+                    room.AddItem(blinds);
+                    ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                    data.Object.blinds = blinds;
+                    return data.Json();
+                }
+                else
+                {
+                    Relay openRelay = new Relay(client, name + "_openrelay", openPin, "", new string[0]);
+                    Relay closeRelay = new Relay(client, name + "_closerelay", closePin, "", new string[0]);
+                    Blinds blinds = new Blinds(client, name, openRelay, closeRelay, totalsteps, description, friendlyNames);
+                    room.AddItem(blinds);
+                    ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                    data.Object.blinds = blinds;
+                    return data.Json();
+                }
+            }
             if (string.IsNullOrEmpty(method))
             {
                 Blinds blinds = null;

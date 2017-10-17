@@ -124,6 +124,7 @@
     <Compile Include="Rooms\Room.cs" />
     <Compile Include="Scenarios\Scenario.cs" />
     <Compile Include="Users\Identity.cs" />
+    <Compile Include="Utilities\ConfigurationFile.cs" />
     <Compile Include="Wrappers\PIGPIO.cs" />
   </ItemGroup>
   <ItemGroup>

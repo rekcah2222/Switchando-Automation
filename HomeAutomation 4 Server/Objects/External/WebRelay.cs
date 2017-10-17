@@ -215,6 +215,64 @@ namespace HomeAutomation.Objects.External
                 if (status) relay.Start(); else relay.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
+            if (method.Equals("createWebRelay"))
+            {
+                string name = null;
+                string id = null;
+                string[] friendlyNames = null;
+                string description = null;
+                string createButton = "none";
+
+                Room room = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "addwebrelay":
+                            name = command[1];
+                            break;
+                        case "id":
+                            id = command[1];
+                            break;
+                        case "description":
+                            description = command[1];
+                            break;
+                        case "setfriendlynames":
+                            string names = command[1];
+                            friendlyNames = names.Split(',');
+                            break;
+                        case "room":
+                            foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                            {
+                                if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                                {
+                                    room = stanza;
+                                }
+                            }
+                            break;
+                        case "createbutton":
+                            createButton = command[1];
+                            break;
+                    }
+                }
+                if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
+                WebRelay relay = new WebRelay(name, id, description, friendlyNames);
+                room.AddItem(relay);
+                if (createButton.Equals("button"))
+                {
+                    relay.AddButton(room);
+                }
+                else if (createButton.Equals("switch_button"))
+                {
+                    relay.AddSwitchButton(room);
+                }
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.relay = relay;
+                return data.Json();
+            }
 
             if (string.IsNullOrEmpty(method))
             {

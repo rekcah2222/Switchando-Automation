@@ -4,6 +4,7 @@ using HomeAutomation.ConfigRetriver;
 using HomeAutomation.Logging.Telegram;
 using HomeAutomation.Network;
 using HomeAutomation.Network.Objects;
+using HomeAutomation.ObjectInterfaces;
 using HomeAutomation.Objects;
 using HomeAutomation.Objects.Blinds;
 using HomeAutomation.Objects.External;
@@ -28,7 +29,12 @@ namespace HomeAutomationCore
 
             //Console.WriteLine(PIGPIO.pigpio_start(null, null));
 
-            Console.WriteLine("Welcome to Switchando Automation 4.5 BETA BV3 (Developers Update) Server by Marco Realacci!");
+            Console.WriteLine("Welcome to Switchando Automation 4 BETA 4 (Bountiful Update) Server by Marco Realacci!");
+
+            new Room();
+            new NetworkInterface("GENERIC_SWITCH", Relay.SendParameters);
+            new NetworkInterface("OBJECT_INTERFACE", ObjectInterface.SendParameters);
+            new NetworkInterface("METHOD_INTERFACE", MethodInterface.SendParameters);
 
             new SetupTool("LIGHT_GPIO_RGB", RGBLight.Setup);
             new SetupTool("LIGHT_GPIO_W", WLight.Setup);
@@ -37,6 +43,8 @@ namespace HomeAutomationCore
             new SetupTool("SWITCH_BUTTON", SwitchButton.Setup);
             new SetupTool("EXTERNAL_SWITCH", WebRelay.Setup);
             new SetupTool("BLINDS", Blinds.Setup);
+
+
 
             TCPServer.StartListening();
 
@@ -125,7 +133,7 @@ namespace HomeAutomationCore
             }
 
             new Client.Client(null, 0, "local");
-            new HTTPHandler(new string[] { "http://*:8080/api/", "http://*:8080/" });
+            new HTTPHandler(new string[] { "http://localhost:8080/api/", "http://localhost:8080/" });
             new FindInterfaces();
             //new VoiceInterface();
 

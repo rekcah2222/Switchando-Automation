@@ -260,6 +260,204 @@ namespace HomeAutomation.Objects.Inputs
         }
         public static string SendParameters(string method, string[] request)
         {
+            if (method.Equals("createButton"))
+            {
+                string name = null;
+                uint pin = 0;
+                Client client = null;
+                bool isRemote = false;
+
+                Room room = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "pin":
+                            string pinStr = command[1];
+                            pin = uint.Parse(pinStr);
+                            break;
+
+                        case "client":
+                            string clientName = command[1];
+                            foreach (Client clnt in HomeAutomationServer.server.Clients)
+                            {
+                                if (clnt.Name.Equals(clientName))
+                                {
+                                    client = clnt;
+                                }
+                            }
+                            if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Raspi-Client not found").Json();
+                            break;
+
+                        case "room":
+                            foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                            {
+                                if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                                {
+                                    room = stanza;
+                                }
+                            }
+                            break;
+
+                        case "remote":
+                            isRemote = bool.Parse(command[1]);
+                            break;
+                    }
+                }
+                if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
+                Button button = new Button(client, name, pin, isRemote);
+                room.AddItem(button);
+
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.button = button;
+                return data.Json();
+            }
+            if (method.Equals("addObject"))
+            {
+                string name = null;
+                string obj = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "device":
+                            obj = command[1];
+                            break;
+                    }
+                }
+                if (name == null || obj == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+
+                Button button = null;
+                ISwitch device = null;
+
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj is ISwitch)
+                    {
+                        if (iobj.GetName().Equals(obj))
+                        {
+                            device = (ISwitch)iobj;
+                        }
+                    }
+                    if (iobj.GetObjectType() == "BUTTON")
+                    {
+                        if (iobj.GetName().Equals(name))
+                        {
+                            button = (Button)iobj;
+                        }
+                    }
+                }
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, name + " not found").Json();
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, obj + " not found").Json();
+
+                button.AddObject(device);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.button = button;
+                return data.Json();
+            }
+            if (method.Equals("addAction"))
+            {
+                string name = null;
+                string obj = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "action":
+                            obj = command[1];
+                            break;
+                    }
+                }
+                if (name == null || obj == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+
+                Button button = null;
+                ObjectInterfaces.Action action = null;
+
+                foreach (ObjectInterfaces.Action iobj in HomeAutomationServer.server.ObjectNetwork.Actions)
+                {
+                    if (iobj.Name.Equals(obj))
+                    {
+                        action = iobj;
+                    }
+                }
+                foreach(IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj.GetObjectType() == "BUTTON")
+                    {
+                        if (iobj.GetName().Equals(name))
+                        {
+                            button = (Button)iobj;
+                        }
+                    }
+                }
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, name + " not found").Json();
+                if (button == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, obj + " not found").Json();
+
+                button.AddAction(action.Name);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.button = button;
+                return data.Json();
+            }
+            if (method.Equals("addCommand"))
+            {
+                string name = null;
+                string newCmd = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "command":
+                            newCmd = command[1];
+                            break;
+                    }
+                }
+
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj.GetObjectType() == "BUTTON")
+                    {
+                        if (iobj.GetName().Equals(name))
+                        {
+                            Button button = (Button)iobj;
+                            button.AddCommand(newCmd);
+
+                            ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                            data.Object.button = button;
+                            return data.Json();
+                        }
+                    }
+                }
+                return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, name + " not found").Json();
+            }
+
             if (method.Equals("click"))
             {
                 Button button = null;

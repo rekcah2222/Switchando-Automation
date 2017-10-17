@@ -50,7 +50,7 @@ namespace HomeAutomationCore
             ObjectNetwork = new ObjectNetwork();
             ObjectNetwork.MethodInterfaces = new List<MethodInterface>();
             ObjectNetwork.ObjectInterfaces = new List<ObjectInterface>();
-
+            ObjectNetwork.Load();
         }
         public string GetPassword()
         {

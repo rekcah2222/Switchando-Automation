@@ -3,7 +3,9 @@ using HomeAutomation.Objects.Switches;
 using HomeAutomationCore;
 using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Web;
 
 namespace HomeAutomation.Network
@@ -18,23 +20,52 @@ namespace HomeAutomation.Network
         }
 
         public static string SendResponse(HttpListenerRequest request)
-        {
-            
+        {            
             string url = request.Url.PathAndQuery.Substring(1);
+
+            if (url.Contains("get=devices"))
+            {
+                return JsonConvert.SerializeObject(HomeAutomationServer.server.Objects);
+            }
+            if (url.Contains("get=switchabledevices"))
+            {
+                System.Collections.Generic.List<ISwitch> switchables = new System.Collections.Generic.List<ISwitch>();
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj is ISwitch)
+                    {
+                        switchables.Add((ISwitch)iobj);
+                    }
+                }
+                return JsonConvert.SerializeObject(switchables);
+            }
+            if (url.Contains("get=rooms"))
+            {
+                return JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms);
+            }
+            if (url.Contains("get=clients"))
+            {
+                var json = JsonConvert.SerializeObject(HomeAutomationServer.server.Clients);
+                return json;
+            }
+
             //CHECK PASSWORD
             string[] interfaceMethod = url.Split('/');
             string netInterface = null;
             string methodsRaw;
-            netInterface = interfaceMethod[0];
+            netInterface = interfaceMethod[0].ToLower();
             methodsRaw = url.Substring(netInterface.Length + 1);
             string method = methodsRaw.Split('?')[0];
             string[] parameters = methodsRaw.Split('?')[1].Split('&');
 
             foreach (NetworkInterface networkInterface in HomeAutomationServer.server.NetworkInterfaces)
             {
-                if (networkInterface.Id.Equals(netInterface))
+                if (networkInterface.Id.ToLower().Equals(netInterface))
                 {
-                    return networkInterface.Run(method, parameters);
+                    string returnMessage = networkInterface.Run(method, parameters);
+                    File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json", JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms));
+                    File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration_objectnetwork.json", JsonConvert.SerializeObject(HomeAutomationServer.server.ObjectNetwork));
+                    return returnMessage;
                 }
             }
 
@@ -44,31 +75,7 @@ namespace HomeAutomation.Network
 
             if (!message.Contains("&password=" + HomeAutomationServer.server.GetPassword())) return "INVALID PASSWORD";
 
-            if (message.Contains("get=devices"))
-            {
-                return JsonConvert.SerializeObject(HomeAutomationServer.server.Objects);
-            }
-            if (message.Contains("get=switchabledevices"))
-            {
-                System.Collections.Generic.List<ISwitch> switchables = new System.Collections.Generic.List<ISwitch>();
-                foreach(IObject iobj in HomeAutomationServer.server.Objects)
-                {
-                    if (iobj is ISwitch)
-                    {
-                        switchables.Add((ISwitch)iobj);
-                    }
-                }
-                return JsonConvert.SerializeObject(switchables);
-            }
-            if (message.Contains("get=rooms"))
-            {
-                return JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms);
-            }
-            if (message.Contains("get=clients"))
-            {
-                var json = JsonConvert.SerializeObject(HomeAutomationServer.server.Clients);
-                return json;
-            }
+            
 
             string[] commands = message.Split('&');
 

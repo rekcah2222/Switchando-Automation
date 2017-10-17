@@ -324,6 +324,67 @@ namespace HomeAutomation.Objects.Lights
                 light.Dimm(dimm_percentage, dimmer);
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
+            if (method.Equals("create"))
+            {
+                string name = null;
+                string[] friendlyNames = null;
+                string description = null;
+
+                uint pin = 0;
+
+                Client client = null;
+
+                Room room = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+                        case "description":
+                            description = command[1];
+                            break;
+                        case "setfriendlynames":
+                            string names = command[1];
+                            friendlyNames = names.Split(',');
+                            break;
+                        case "pin":
+                            string pinStr = command[1];
+                            pin = uint.Parse(pinStr);
+                            break;
+                        case "client":
+                            string clientName = command[1];
+                            foreach (Client clnt in HomeAutomationServer.server.Clients)
+                            {
+                                if (clnt.Name.Equals(clientName))
+                                {
+                                    client = clnt;
+                                }
+                            }
+                            if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Raspi-Client not found").Json();
+                            break;
+                        case "room":
+                            foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                            {
+                                if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                                {
+                                    room = stanza;
+                                }
+                            }
+                            break;
+                    }
+                }
+                if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
+                WLight light = new WLight(client, name, pin, description, friendlyNames);
+                room.AddItem(light);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.light = light;
+                return data.Json();
+            }
 
             if (string.IsNullOrEmpty(method))
             {

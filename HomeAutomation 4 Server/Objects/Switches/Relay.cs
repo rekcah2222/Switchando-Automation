@@ -28,10 +28,9 @@ namespace HomeAutomation.Objects.Fans
         {
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface(ObjectType, requestHandler);
 
-            new ObjectInterface(null, "Pin", typeof(uint), "testing things");
-            new MethodInterface(NetworkInterface.FromId("relay"), "switch_TEST", "another testing thing");
+            new ObjectInterface(NetworkInterface.FromId(ObjectType), "Pin", typeof(uint), "testing things");
+            new MethodInterface(NetworkInterface.FromId(ObjectType), "switch_TEST", "another testing thing");
         }
         public Relay(Client client, string name, uint pin, string description, string[] friendlyNames)
         {
@@ -44,11 +43,7 @@ namespace HomeAutomation.Objects.Fans
             this.Name = name;
             HomeAutomationServer.server.Objects.Add(this);
 
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface(ObjectType, requestHandler);
-
-            new ObjectInterface(null, "Pin", typeof(uint), "testing things");
+            new ObjectInterface(NetworkInterface.FromId(ObjectType), "Pin", typeof(uint), "testing things");
             new MethodInterface(NetworkInterface.FromId("relay"), "switch_TEST", "another testing thing");
         }
         public void SetClient(Client client)
@@ -110,7 +105,7 @@ namespace HomeAutomation.Objects.Fans
         }
         public NetworkInterface GetInterface()
         {
-            return NetworkInterface.FromId("relay");
+            return NetworkInterface.FromId(ObjectType);
         }
         private static Relay FindRelayFromName(string name)
         {
@@ -155,7 +150,6 @@ namespace HomeAutomation.Objects.Fans
                 if (status) relay.Start(); else relay.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
-
             if (method.Equals("switch_TEST")) //REMOVE THIS PLS
             {
                 Relay relay = null;
@@ -177,6 +171,67 @@ namespace HomeAutomation.Objects.Fans
                 }
                 if (status) relay.Start(); else relay.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
+            }
+            if (method.Equals("createRelay"))
+            {
+                string name = null;
+                string[] friendlyNames = null;
+                string description = null;
+
+                uint pin = 0;
+
+                Client client = null;
+
+                Room room = null;
+
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+                        case "description":
+                            description = command[1];
+                            break;
+                        case "setfriendlynames":
+                            string names = command[1];
+                            friendlyNames = names.Split(',');
+                            break;
+                        case "pin":
+                            string pinStr = command[1];
+                            pin = uint.Parse(pinStr);
+                            break;
+                        case "client":
+                            string clientName = command[1];
+                            foreach (Client clnt in HomeAutomationServer.server.Clients)
+                            {
+                                if (clnt.Name.Equals(clientName))
+                                {
+                                    client = clnt;
+                                }
+                            }
+                            if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Raspi-Client not found").Json();
+                            break;
+                        case "room":
+                            foreach (Room stanza in HomeAutomationServer.server.Rooms)
+                            {
+                                if (stanza.Name.ToLower().Equals(command[1].ToLower()))
+                                {
+                                    room = stanza;
+                                }
+                            }
+                            break;
+                    }
+                }
+                if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
+                Relay relay = new Relay(client, name, pin, description, friendlyNames);
+                room.AddItem(relay);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.relay = relay;
+                return data.Json();
             }
 
             if (string.IsNullOrEmpty(method))

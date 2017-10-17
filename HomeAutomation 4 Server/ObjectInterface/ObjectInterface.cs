@@ -20,7 +20,7 @@ namespace HomeAutomation.ObjectInterfaces
             this.Name = name;
             this.Type = type;
             this.Description = description;
-            HomeAutomationServer.server.ObjectNetwork.ObjectInterfaces.Add(this); //TODO
+            HomeAutomationServer.server.ObjectNetwork.ObjectInterfaces.Add(this);
         }
 
         public static string[] GetPropertiesFromObject(IObject obj)

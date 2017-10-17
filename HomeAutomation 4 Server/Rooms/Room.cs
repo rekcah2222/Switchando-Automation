@@ -1,5 +1,6 @@
 ﻿using HomeAutomation.Dictionaries;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects;
 using HomeAutomation.Objects.Lights;
 using HomeAutomation.Objects.Switches;
@@ -28,6 +29,12 @@ namespace HomeAutomation.Rooms
             {
                 if (netInt.Id.Equals("room")) return;
             }
+            NetworkInterface.Delegate requestHandler;
+            requestHandler = SendParameters;
+            NetworkInterface networkInterface = new NetworkInterface("room", requestHandler);
+        }
+        public Room()
+        {
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
             NetworkInterface networkInterface = new NetworkInterface("room", requestHandler);
@@ -191,7 +198,55 @@ namespace HomeAutomation.Rooms
                 room.Dimm(dimm_percentage, dimmer);
                 return "";
             }
+            if (method.Equals("createRoom"))
+            {
+                string name = null;
+                bool hiddenRoom = false;
+                string[] friendlyNames = null;
 
+                foreach (string cmd in request)
+                {
+                    string[] command = cmd.Split('=');
+                    if (command[0].Equals("interface")) continue;
+                    switch (command[0])
+                    {
+                        case "objname":
+                            name = command[1];
+                            break;
+
+                        case "setfriendlynames":
+                            string names = command[1];
+                            friendlyNames = names.Split(',');
+                            break;
+
+                        case "hiddenroom":
+                            string hiddenroomString = command[1];
+                            hiddenRoom = bool.Parse(hiddenroomString);
+                            break;
+                    }
+                }
+                Room editRoom = null;
+                foreach (Room area in HomeAutomationServer.server.Rooms)
+                {
+                    if (area.Name.ToLower().Equals(name.ToLower()))
+                    {
+                        editRoom = area;
+                    }
+                }
+                if (editRoom != null)
+                {
+                    editRoom.Name = name;
+                    if (friendlyNames != null) editRoom.FriendlyNames = friendlyNames;
+                    editRoom.Hidden = hiddenRoom;
+                    ReturnStatus return_data = new ReturnStatus(CommonStatus.SUCCESS);
+                    return_data.Object.room = editRoom;
+                    return return_data.Json();
+                }
+                Room room = new Room(name, friendlyNames, hiddenRoom);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.room = room;
+                return data.Json();
+            }
             if (string.IsNullOrEmpty(method))
             {
                 Room room = null;

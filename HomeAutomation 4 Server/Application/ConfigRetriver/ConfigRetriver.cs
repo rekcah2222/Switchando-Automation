@@ -754,7 +754,7 @@ namespace HomeAutomation.ConfigRetriver
             SimpleFan relay = new SimpleFan(client, name, pin, description, friendlyNames);
             room.AddItem(relay);
         }*/
-        private static void CreateButton(string[] data)
+        private static void CreateButton(string[] data) // a posto
         {
             string name = null;
             uint pin = 0;
