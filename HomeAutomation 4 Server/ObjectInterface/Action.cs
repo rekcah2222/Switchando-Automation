@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace HomeAutomation.ObjectInterfaces
@@ -19,6 +20,7 @@ namespace HomeAutomation.ObjectInterfaces
         public Dictionary<string, object> Parameters;
         public Condition[] Conditions;
 
+        public Action() { }
         public Action(string name, string description, MethodInterface methodInterface, Dictionary<string, object> parameters, Condition[] conditions)
         {
             this.Name = name;
@@ -26,7 +28,7 @@ namespace HomeAutomation.ObjectInterfaces
             this.Method = methodInterface;
             this.Parameters = parameters;
             this.Conditions = conditions;
-            HomeAutomationServer.server.ObjectNetwork.Actions.Add(this);
+            HomeAutomationServer.server.ObjectNetwork.Objects.Actions.Add(this);
         }
         public string Run()
         {
@@ -41,7 +43,7 @@ namespace HomeAutomation.ObjectInterfaces
         }
         public static Action FromName(string name)
         {
-            foreach(Action action in HomeAutomationServer.server.ObjectNetwork.Actions)
+            foreach(Action action in HomeAutomationServer.server.ObjectNetwork.Objects.Actions)
             {
                 if (action.Name.Equals(name)) return action;
             }
@@ -91,7 +93,7 @@ namespace HomeAutomation.ObjectInterfaces
                 }
                 if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(description)) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
 
-                actionMethod = MethodInterface.FromString(methodInterface, method);
+                actionMethod = MethodInterface.FromString(methodInterface, methodName);
                 if (actionMethod == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Method not found").Json();
 
                 Dictionary<string, object> parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonParameters);
@@ -99,7 +101,8 @@ namespace HomeAutomation.ObjectInterfaces
                 Condition[] conditions = new Condition[0];
                 if (!string.IsNullOrEmpty(jsonConditions))
                 {
-                    conditions = JsonConvert.DeserializeObject<Condition[]>(jsonConditions);
+                    jsonConditions = jsonConditions.Replace(@"\", string.Empty);
+                    conditions = JsonConvert.DeserializeObject<Condition[]>(Regex.Unescape(jsonConditions));
                 }
 
                 Action action = new Action(name, description, actionMethod, parameters, conditions);

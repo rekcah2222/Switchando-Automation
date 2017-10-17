@@ -30,7 +30,9 @@ namespace HomeAutomation.Objects.Fans
             requestHandler = SendParameters;
 
             new ObjectInterface(NetworkInterface.FromId(ObjectType), "Pin", typeof(uint), "testing things");
-            new MethodInterface(NetworkInterface.FromId(ObjectType), "switch_TEST", "another testing thing");
+            NetworkInterface ni = NetworkInterface.FromId(ObjectType);
+            MethodInterface customMethod1 = new MethodInterface(ni, "switch_TEST", "another testing thing");
+            customMethod1.AddParameter(new MethodParameter("objname", typeof(string), ""));
         }
         public Relay(Client client, string name, uint pin, string description, string[] friendlyNames)
         {
@@ -44,7 +46,8 @@ namespace HomeAutomation.Objects.Fans
             HomeAutomationServer.server.Objects.Add(this);
 
             new ObjectInterface(NetworkInterface.FromId(ObjectType), "Pin", typeof(uint), "testing things");
-            new MethodInterface(NetworkInterface.FromId("relay"), "switch_TEST", "another testing thing");
+            MethodInterface customMethod1 = new MethodInterface(NetworkInterface.FromId(ObjectType), "switch_TEST", "another testing thing");
+            customMethod1.AddParameter(new MethodParameter("objname", typeof(string), ""));
         }
         public void SetClient(Client client)
         {

@@ -22,6 +22,7 @@ namespace HomeAutomation.Network
         public static string SendResponse(HttpListenerRequest request)
         {            
             string url = request.Url.PathAndQuery.Substring(1);
+            url = HttpUtility.UrlDecode(url);
 
             if (url.Contains("get=devices"))
             {
@@ -64,7 +65,7 @@ namespace HomeAutomation.Network
                 {
                     string returnMessage = networkInterface.Run(method, parameters);
                     File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json", JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms));
-                    File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration_objectnetwork.json", JsonConvert.SerializeObject(HomeAutomationServer.server.ObjectNetwork));
+                    HomeAutomationServer.server.ObjectNetwork.Save();
                     return returnMessage;
                 }
             }

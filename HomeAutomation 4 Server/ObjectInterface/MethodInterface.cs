@@ -14,6 +14,7 @@ namespace HomeAutomation.ObjectInterfaces
         public List<MethodParameter> Parameters;
         public string Description;
         
+        public MethodInterface() { }
         public MethodInterface(NetworkInterface networkInterface, string name, string description)
         {
             this.Interface = networkInterface;
@@ -54,6 +55,7 @@ namespace HomeAutomation.ObjectInterfaces
         }
         public string Run(Dictionary<string, object> request)
         {
+            foreach (MethodInterface mi in HomeAutomationServer.server.ObjectNetwork.MethodInterfaces) continue;
             List<string> parameters = new List<string>();
             foreach(MethodParameter parameter in Parameters)
             {
@@ -121,7 +123,7 @@ namespace HomeAutomation.ObjectInterfaces
                 data.Object.properties = GetMethodsFromObject(obj);
                 return data.Json();
             }
-            if (method.Equals("getMethods/device"))
+            if (method.Equals("getMethods/interface"))
             {
                 string networkInterface = null;
                 foreach (string cmd in request)

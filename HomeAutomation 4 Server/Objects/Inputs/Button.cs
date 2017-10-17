@@ -394,7 +394,7 @@ namespace HomeAutomation.Objects.Inputs
                 Button button = null;
                 ObjectInterfaces.Action action = null;
 
-                foreach (ObjectInterfaces.Action iobj in HomeAutomationServer.server.ObjectNetwork.Actions)
+                foreach (ObjectInterfaces.Action iobj in HomeAutomationServer.server.ObjectNetwork.Objects.Actions)
                 {
                     if (iobj.Name.Equals(obj))
                     {

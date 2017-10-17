@@ -41,7 +41,7 @@ namespace HomeAutomation.ObjectInterfaces
             List<string> properties = new List<string>();
             foreach (ObjectInterface property in HomeAutomationServer.server.ObjectNetwork.ObjectInterfaces)
             {
-                if (networkInterface == property.Interface.Id)
+                if (networkInterface.ToLower().Equals(property.Interface.Id.ToLower()))
                 {
                     properties.Add(property.Name);
                 }

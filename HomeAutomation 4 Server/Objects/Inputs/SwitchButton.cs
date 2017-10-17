@@ -444,7 +444,7 @@ namespace HomeAutomation.Objects.Inputs
                 bool on = false;
                 bool off = false;
 
-                foreach (ObjectInterfaces.Action iobj in HomeAutomationServer.server.ObjectNetwork.Actions)
+                foreach (ObjectInterfaces.Action iobj in HomeAutomationServer.server.ObjectNetwork.Objects.Actions)
                 {
                     if (objOn != null)
                     {

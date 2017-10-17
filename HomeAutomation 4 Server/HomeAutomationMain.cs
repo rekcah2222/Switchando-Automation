@@ -31,10 +31,15 @@ namespace HomeAutomationCore
 
             Console.WriteLine("Welcome to Switchando Automation 4 BETA 4 (Bountiful Update) Server by Marco Realacci!");
 
-            new Room();
-            new NetworkInterface("GENERIC_SWITCH", Relay.SendParameters);
             new NetworkInterface("OBJECT_INTERFACE", ObjectInterface.SendParameters);
             new NetworkInterface("METHOD_INTERFACE", MethodInterface.SendParameters);
+            new NetworkInterface("ACTION", HomeAutomation.ObjectInterfaces.Action.SendParameters);
+
+            new Room();
+            NetworkInterface button = new NetworkInterface("GENERIC_SWITCH", Relay.SendParameters);
+            new ObjectInterface(button, "Pin", typeof(uint), "testing things");
+            new MethodInterface(button, "switch_TEST", "another testing thing")
+            .AddParameter(new MethodParameter("objname", typeof(string), ""));
 
             new SetupTool("LIGHT_GPIO_RGB", RGBLight.Setup);
             new SetupTool("LIGHT_GPIO_W", WLight.Setup);
