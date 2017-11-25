@@ -3,6 +3,7 @@ using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.Inputs;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -22,18 +23,11 @@ namespace HomeAutomation.Objects.External
         public string Address;
         public string ClientName = "local";
 
-        public string ObjectType = "EXTERNAL_SWITCH";
+        public string ObjectType = "HTTP_SWITCH";
         public string ObjectModel = "SWITCH";
 
         public WebRelay()
         {
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("webrelay")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("webrelay", requestHandler);
         }
         public WebRelay(string name, string id, string description, string[] friendlyNames)
         {
@@ -42,14 +36,6 @@ namespace HomeAutomation.Objects.External
             this.Name = name;
             this.ID = id;
             HomeAutomationServer.server.Objects.Add(this);
-
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("webrelay")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("webrelay", requestHandler);
         }
 
         public void Start()
@@ -135,7 +121,7 @@ namespace HomeAutomation.Objects.External
         }
         public NetworkInterface GetInterface()
         {
-            return NetworkInterface.FromId("webrelay");
+            return NetworkInterface.FromId(ObjectType);
         }
         private static WebRelay FindWebRelayFromName(string name)
         {
@@ -156,10 +142,11 @@ namespace HomeAutomation.Objects.External
             }
             return relay;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("handshake"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 WebRelay webrelay = null;
                 string address = null;
                 foreach (string cmd in request)
@@ -210,13 +197,15 @@ namespace HomeAutomation.Objects.External
                             status = bool.Parse(command[1]);
                             break;
                     }
-                    if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                if (!login.HasAccess(relay)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 if (status) relay.Start(); else relay.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
             if (method.Equals("createWebRelay"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string id = null;
                 string[] friendlyNames = null;
@@ -231,7 +220,7 @@ namespace HomeAutomation.Objects.External
                     if (command[0].Equals("interface")) continue;
                     switch (command[0])
                     {
-                        case "addwebrelay":
+                        case "objname":
                             name = command[1];
                             break;
                         case "id":
@@ -276,6 +265,7 @@ namespace HomeAutomation.Objects.External
 
             if (string.IsNullOrEmpty(method))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 WebRelay webrelay = null;
                 foreach (string cmd in request)
                 {

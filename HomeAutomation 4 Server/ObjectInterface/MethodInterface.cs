@@ -3,13 +3,14 @@ using HomeAutomationCore;
 using HomeAutomation.Network.APIStatus;
 using System.Collections.Generic;
 using HomeAutomation.Objects;
+using HomeAutomation.Users;
 
 namespace HomeAutomation.ObjectInterfaces
 {
     public class MethodInterface
     {
 
-        public NetworkInterface Interface;
+        public string Interface;
         public string Name;
         public List<MethodParameter> Parameters;
         public string Description;
@@ -17,7 +18,7 @@ namespace HomeAutomation.ObjectInterfaces
         public MethodInterface() { }
         public MethodInterface(NetworkInterface networkInterface, string name, string description)
         {
-            this.Interface = networkInterface;
+            this.Interface = networkInterface.Id;
             this.Name = name;
             this.Description = description;
             this.Parameters = new List<MethodParameter>();
@@ -33,7 +34,7 @@ namespace HomeAutomation.ObjectInterfaces
             NetworkInterface networkInterface = obj.GetInterface();
             foreach (MethodInterface method in HomeAutomationServer.server.ObjectNetwork.MethodInterfaces)
             {
-                if (networkInterface == method.Interface)
+                if (networkInterface.Id.Equals(method.Interface))
                 {
                     methods.Add(method);
                 }
@@ -46,14 +47,14 @@ namespace HomeAutomation.ObjectInterfaces
             NetworkInterface networkInterface = NetworkInterface.FromId(netInterface);
             foreach (MethodInterface method in HomeAutomationServer.server.ObjectNetwork.MethodInterfaces)
             {
-                if (networkInterface == method.Interface)
+                if (networkInterface.Id.Equals(method.Interface))
                 {
                     methods.Add(method);
                 }
             }
             return methods.ToArray();
         }
-        public string Run(Dictionary<string, object> request)
+        public string Run(Dictionary<string, object> request, Identity user)
         {
             foreach (MethodInterface mi in HomeAutomationServer.server.ObjectNetwork.MethodInterfaces) continue;
             List<string> parameters = new List<string>();
@@ -66,7 +67,7 @@ namespace HomeAutomation.ObjectInterfaces
                 }
                 parameters.Add(parameter.Name + "=" + parameter_value);
             }
-            return Interface.Run(Name, parameters.ToArray());
+            return NetworkInterface.FromId(Interface).Run(Name, parameters.ToArray(), user);
         }
         public string GetRequest(Dictionary<string, object> request)
         {
@@ -80,13 +81,13 @@ namespace HomeAutomation.ObjectInterfaces
                 }
                 parameters.Add(parameter.Name + "=" + parameter_value);
             }
-            return Interface.Id + "/" + Name + "?" + string.Join("&", parameters);
+            return Interface + "/" + Name + "?" + string.Join("&", parameters);
         }
         public static MethodInterface FromString(string methodInterface, string method)
         {
             foreach (MethodInterface methodobj in HomeAutomationServer.server.ObjectNetwork.MethodInterfaces)
             {
-                if (methodobj.Interface.Equals(NetworkInterface.FromId(methodInterface)))
+                if (methodobj.Interface.Equals(NetworkInterface.FromId(methodInterface).Id))
                 {
                     if (methodobj.Name.Equals(method))
                     {
@@ -96,7 +97,7 @@ namespace HomeAutomation.ObjectInterfaces
             }
             return null;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("getMethods/device"))
             {
@@ -120,7 +121,7 @@ namespace HomeAutomation.ObjectInterfaces
                 if (obj == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
 
                 ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
-                data.Object.properties = GetMethodsFromObject(obj);
+                data.Object.methods = GetMethodsFromObject(obj);
                 return data.Json();
             }
             if (method.Equals("getMethods/interface"))
@@ -139,7 +140,7 @@ namespace HomeAutomation.ObjectInterfaces
                 if (networkInterface == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
 
                 ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
-                data.Object.properties = GetMethodsFromInterface(networkInterface);
+                data.Object.methods = GetMethodsFromInterface(networkInterface);
                 return data.Json();
             }
             if (method.StartsWith("runMethod/device"))
@@ -186,7 +187,7 @@ namespace HomeAutomation.ObjectInterfaces
                     parameters.Add(command[0], command[1]);
                 }
 
-                return methodInterface.Run(parameters);
+                return methodInterface.Run(parameters, login);
             }
             if (method.StartsWith("runMethod/interface"))
             {
@@ -231,7 +232,7 @@ namespace HomeAutomation.ObjectInterfaces
                     parameters.Add(command[0], command[1]);
                 }
 
-                return methodInterface.Run(parameters);
+                return methodInterface.Run(parameters, login);
             }
 
             if (method.StartsWith("getCommand/device"))
@@ -260,7 +261,7 @@ namespace HomeAutomation.ObjectInterfaces
 
                 foreach (MethodInterface methodInt in HomeAutomationServer.server.ObjectNetwork.MethodInterfaces)
                 {
-                    if (methodInt.Interface.Equals(networkInterface))
+                    if (methodInt.Interface.Equals(networkInterface.Id))
                     {
                         if (methodInt.Name.Equals(methodName))
                         {

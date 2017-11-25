@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>#HomeAutomation</title>
+    <link href="resources/material.min.css" type="text/css" rel="stylesheet">
+    <link href="resources/style.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+
+    <div class="realborders">
+        <h4 style="text-align:center">Add a new relay</h4>
+        <form id="form">
+            <span class="span">Name of the relay</span>
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+                <input class="mdl-textfield__input" type="text" id="name">
+                <label class="mdl-textfield__label" for="name">Relay name</label>
+            </div>
+            <br /><br />
+            <span class="span">ID of the remote relay (should be on the remote (Sonoff, Arduino...) app)</span>
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+                <input class="mdl-textfield__input" type="text" id="identifier">
+                <label class="mdl-textfield__label" for="identifier">Identifier</label>
+            </div>
+            <br /><br />
+            <span class="span">Friendly names of the light, separated by comma (,)</span>
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+                <input class="mdl-textfield__input" type="text" id="friendlynames">
+                <label class="mdl-textfield__label" for="friendlynames">Friendly names</label>
+            </div>
+            <br /><br />
+            <span class="span">Description of the light</span>
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+                <input class="mdl-textfield__input" type="text" id="description">
+                <label class="mdl-textfield__label" for="description">Description</label>
+            </div>
+            <br /><br />
+            <span class="span spanborder">Select the room</span><br />
+            <div>
+                <select style="width:100%;height:30px;" id="room_select">
+                    <option value="Choose the room" disabled>Choose the room</option>
+                </select>
+            </div>
+            <br /><br />
+            <span class="span spanborder">Add also a remote button</span><br />
+            <div>
+                <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="btnNone">
+                    <input type="radio" id="btnNone" class="mdl-radio__button" name="createbtn" value="1" checked>
+                    <span class="mdl-radio__label">None</span>
+                </label>
+            </div>
+            <div>
+                <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="btnBtn">
+                    <input type="radio" id="btnBtn" class="mdl-radio__button" name="createbtn" value="2">
+                    <span class="mdl-radio__label">Button</span>
+                </label>
+            </div>
+            <div>
+                <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="btnSwbtn">
+                    <input type="radio" id="btnSwbtn" class="mdl-radio__button" name="createbtn" value="3">
+                    <span class="mdl-radio__label">Switch Button</span>
+                </label>
+            </div>
+            <br /><br />
+            <button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" style="width:100%" onclick="addWebRelay(form)">
+                ADD WEB REMOTE RELAY
+            </button>
+        </form>
+    </div>
+    <script src="resources/jQuery.js"></script>
+    <script src="resources/material.min.js"></script>
+    <script src="resources/settings/settings.js"></script>
+    <script type="text/javascript">window.onload = loadRooms;</script>
+</body>
+</html>

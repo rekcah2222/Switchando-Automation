@@ -4,6 +4,7 @@ using HomeAutomation.Network.APIStatus;
 using HomeAutomation.ObjectInterfaces;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -28,11 +29,6 @@ namespace HomeAutomation.Objects.Fans
         {
             NetworkInterface.Delegate requestHandler;
             requestHandler = SendParameters;
-
-            new ObjectInterface(NetworkInterface.FromId(ObjectType), "Pin", typeof(uint), "testing things");
-            NetworkInterface ni = NetworkInterface.FromId(ObjectType);
-            MethodInterface customMethod1 = new MethodInterface(ni, "switch_TEST", "another testing thing");
-            customMethod1.AddParameter(new MethodParameter("objname", typeof(string), ""));
         }
         public Relay(Client client, string name, uint pin, string description, string[] friendlyNames)
         {
@@ -44,10 +40,6 @@ namespace HomeAutomation.Objects.Fans
             this.Pin = pin;
             this.Name = name;
             HomeAutomationServer.server.Objects.Add(this);
-
-            new ObjectInterface(NetworkInterface.FromId(ObjectType), "Pin", typeof(uint), "testing things");
-            MethodInterface customMethod1 = new MethodInterface(NetworkInterface.FromId(ObjectType), "switch_TEST", "another testing thing");
-            customMethod1.AddParameter(new MethodParameter("objname", typeof(string), ""));
         }
         public void SetClient(Client client)
         {
@@ -102,9 +94,9 @@ namespace HomeAutomation.Objects.Fans
         {
             return FriendlyNames;
         }
-        void UploadValues(bool Value)
+        void UploadValues(bool value)
         {
-            Client.Sendata("interface=relay&objname=" + this.Name + "&enabled=" + Value.ToString());
+            Client.Sendata("GENERIC_SWITCH/switch?objname=" + this.Name + "&switch=" + value.ToString());
         }
         public NetworkInterface GetInterface()
         {
@@ -129,7 +121,7 @@ namespace HomeAutomation.Objects.Fans
             }
             return relay;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("switch"))
             {
@@ -148,8 +140,9 @@ namespace HomeAutomation.Objects.Fans
                             status = bool.Parse(command[1]);
                             break;
                     }
-                    if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (relay == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                if (!login.HasAccess(relay)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 if (status) relay.Start(); else relay.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
@@ -177,6 +170,7 @@ namespace HomeAutomation.Objects.Fans
             }
             if (method.Equals("createRelay"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string[] friendlyNames = null;
                 string description = null;
@@ -239,6 +233,7 @@ namespace HomeAutomation.Objects.Fans
 
             if (string.IsNullOrEmpty(method))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 Relay fan = null;
                 foreach (string cmd in request)
                 {

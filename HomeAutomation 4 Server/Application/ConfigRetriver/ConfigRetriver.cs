@@ -1,4 +1,4 @@
-﻿using HomeAutomation.Network;
+﻿/*using HomeAutomation.Network;
 using HomeAutomation.Objects;
 using HomeAutomation.Objects.Blinds;
 using HomeAutomation.Objects.External;
@@ -753,7 +753,7 @@ namespace HomeAutomation.ConfigRetriver
             if (room == null) return;
             SimpleFan relay = new SimpleFan(client, name, pin, description, friendlyNames);
             room.AddItem(relay);
-        }*/
+        }
         private static void CreateButton(string[] data) // a posto
         {
             string name = null;
@@ -1036,4 +1036,4 @@ namespace HomeAutomation.ConfigRetriver
             button.AddObject(switchable);
         }
     }
-}
+}*/

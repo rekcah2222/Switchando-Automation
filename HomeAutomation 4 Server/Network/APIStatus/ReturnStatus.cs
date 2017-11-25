@@ -11,6 +11,10 @@ namespace HomeAutomation.Network.APIStatus
             Object = new ExpandoObject();
             Object.status = status;
         }
+        public ReturnStatus()
+        {
+            Object = new ExpandoObject();
+        }
         public ReturnStatus(CommonStatus status)
         {
             Object = new ExpandoObject();
@@ -32,6 +36,7 @@ namespace HomeAutomation.Network.APIStatus
         SUCCESS = 0,
         ERROR_NOT_FOUND = 404,
         ERROR_BAD_REQUEST = 400,
+        ERROR_FORBIDDEN_REQUEST = 403,
         ERROR_NOT_IMPLEMENTED = 501
     }
 }

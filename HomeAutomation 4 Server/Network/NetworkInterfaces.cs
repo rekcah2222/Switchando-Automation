@@ -1,4 +1,5 @@
-﻿using HomeAutomationCore;
+﻿using HomeAutomation.Users;
+using HomeAutomationCore;
 using System;
 
 namespace HomeAutomation.Network
@@ -7,7 +8,7 @@ namespace HomeAutomation.Network
     {
         public string Id;
 
-        public delegate string Delegate(string method, string[] request);
+        public delegate string Delegate(string method, string[] request, Identity login);
         Delegate Handler;
 
         public NetworkInterface(string id, Delegate handler)
@@ -22,9 +23,9 @@ namespace HomeAutomation.Network
             HomeAutomationServer.server.NetworkInterfaces.Add(this);
         }
 
-        public string Run(string method, string[] request)
+        public string Run(string method, string[] request, Identity login)
         {
-            return this.Handler(method, request);
+            return this.Handler(method, request, login);
         }
 
         public static NetworkInterface FromId(string id)

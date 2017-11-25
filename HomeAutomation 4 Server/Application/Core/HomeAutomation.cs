@@ -6,7 +6,6 @@ using HomeAutomation.ObjectInterfaces;
 using HomeAutomation.Objects;
 using HomeAutomation.Rooms;
 using HomeAutomation.Scenarios;
-using HomeAutomation.Users;
 using System.Collections.Generic;
 
 namespace HomeAutomationCore
@@ -19,15 +18,13 @@ namespace HomeAutomationCore
         public List<NetworkInterface> NetworkInterfaces { get; set; }
         public List<SetupTool> Setups { get; set; }
         public List<Configuration> Configs { get; set; }
-        public List<Identity> Identities { get; set; }
 
         public List<IObject> Objects { get; set; }
         public List<Room> Rooms { get; set; }
         public List<Scenario> Scenarios { get; set; }
-
         public TelegramBot Telegram { get; set; }
-        
         public ObjectNetwork ObjectNetwork { get; set; }
+        public Dictionary<string, string> HTMLFragments { get; set; }
 
         public string House;
         private string Password;
@@ -46,6 +43,8 @@ namespace HomeAutomationCore
             NetworkInterfaces = new List<NetworkInterface>();
             Setups = new List<SetupTool>();
             Configs = new List<Configuration>();
+
+            HTMLFragments = new Dictionary<string, string>();
 
             ObjectNetwork = new ObjectNetwork();
             ObjectNetwork.MethodInterfaces = new List<MethodInterface>();

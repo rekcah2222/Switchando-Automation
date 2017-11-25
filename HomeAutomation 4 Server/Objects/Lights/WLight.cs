@@ -2,6 +2,7 @@
 using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -30,13 +31,6 @@ namespace HomeAutomation.Objects.Lights
 
         public WLight()
         {
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("light_w")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("light_w", requestHandler);
         }
         public WLight(Client client, string Name, uint pin, string description, string[] FriendlyNames)
         {
@@ -58,14 +52,6 @@ namespace HomeAutomation.Objects.Lights
             }
 
             HomeAutomationServer.server.Objects.Add(this);
-
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("light_w")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("light_w", requestHandler);
         }
         public void SetClient(Client client)
         {
@@ -220,11 +206,11 @@ namespace HomeAutomation.Objects.Lights
         }
         public NetworkInterface GetInterface()
         {
-            return NetworkInterface.FromId("light_w");
+            return NetworkInterface.FromId(ObjectType);
         }
         void UploadValues(uint Value, int DimmerIntervals)
         {
-            Client.Sendata("interface=light_w&objname=" + this.Name + "&W=" + Value + "&dimmer=" + DimmerIntervals);
+            Client.Sendata("LIGHT_GPIO_W/changeValue?objname=" + this.Name + "&W=" + Value + "&dimmer=" + DimmerIntervals);
         }
         private static WLight FindLightFromName(string name)
         {
@@ -245,7 +231,7 @@ namespace HomeAutomation.Objects.Lights
             }
             return light;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("changeValue"))
             {
@@ -271,8 +257,9 @@ namespace HomeAutomation.Objects.Lights
                             dimmer = int.Parse(command[1]);
                             break;
                     }
-                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                if (!login.HasAccess(light)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 light.Set(pwm, dimmer);
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
@@ -295,6 +282,7 @@ namespace HomeAutomation.Objects.Lights
                     }
                     if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (!login.HasAccess(light)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 if (status) light.Start(); else light.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
@@ -321,11 +309,13 @@ namespace HomeAutomation.Objects.Lights
                     }
                     if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (!login.HasAccess(light)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 light.Dimm(dimm_percentage, dimmer);
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
             if (method.Equals("create"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string[] friendlyNames = null;
                 string description = null;
@@ -388,6 +378,7 @@ namespace HomeAutomation.Objects.Lights
 
             if (string.IsNullOrEmpty(method))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 WLight light = null;
                 uint Value = 0;
                 int dimmer = 0;

@@ -3,6 +3,7 @@ using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -67,15 +68,6 @@ namespace HomeAutomation.Objects.Inputs
                     timer.Start();
                 }
             }
-
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("switch_button")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("switch_button", requestHandler);
-
             HomeAutomationServer.server.Objects.Add(this);
         }
         public void SetClient(Client client)
@@ -187,7 +179,7 @@ namespace HomeAutomation.Objects.Inputs
                 foreach (string actionRaw in ActionsOn)
                 {
                     ObjectInterfaces.Action action = ObjectInterfaces.Action.FromName(actionRaw);
-                    action.Run();
+                    action.Run(Identity.GetAdminUser());
                 }
                 List<ISwitch> objectsList = new List<ISwitch>();
                 foreach (IObject iobj in HomeAutomationServer.server.Objects)
@@ -226,7 +218,7 @@ namespace HomeAutomation.Objects.Inputs
                 foreach (string actionRaw in ActionsOff)
                 {
                     ObjectInterfaces.Action action = ObjectInterfaces.Action.FromName(actionRaw);
-                    action.Run();
+                    action.Run(Identity.GetAdminUser());
                 }
                 List<ISwitch> objectsList = new List<ISwitch>();
                 foreach (IObject iobj in HomeAutomationServer.server.Objects)
@@ -252,7 +244,7 @@ namespace HomeAutomation.Objects.Inputs
         }
         public NetworkInterface GetInterface()
         {
-            return null;
+            return NetworkInterface.FromId(ObjectType);
         }
         public string[] GetFriendlyNames()
         {
@@ -277,10 +269,11 @@ namespace HomeAutomation.Objects.Inputs
             }
             return myobj;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("click"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 SwitchButton switch_button = null;
                 bool status = false;
 
@@ -304,6 +297,7 @@ namespace HomeAutomation.Objects.Inputs
 
             if (method.Equals("createSwitchButton"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 uint pin = 0;
                 Client client = null;
@@ -362,6 +356,7 @@ namespace HomeAutomation.Objects.Inputs
             }
             if (method.Equals("addObject"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string obj = null;
 
@@ -412,6 +407,7 @@ namespace HomeAutomation.Objects.Inputs
             }
             if (method.Equals("addAction"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string objOn = null;
                 string objOff = null;
@@ -485,6 +481,7 @@ namespace HomeAutomation.Objects.Inputs
             }
             if (method.Equals("addCommand"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string cmdOn = null;
                 string cmdOff = null;
@@ -531,6 +528,7 @@ namespace HomeAutomation.Objects.Inputs
 
             if (string.IsNullOrEmpty(method))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 SwitchButton button = null;
                 foreach (string cmd in request)
                 {

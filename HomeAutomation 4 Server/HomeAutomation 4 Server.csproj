@@ -56,9 +56,13 @@
     <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>HomeAutomationCore.HomeAutomationMain</StartupObject>
+    <StartupObject>
+    </StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="M2Mqtt.Net, Version=4.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\M2Mqtt.4.3.0.0\lib\net45\M2Mqtt.Net.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -82,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Application\Client\Client.cs" />
+    <Compile Include="Application\ConfigRetriver\ConfigManager.cs" />
     <Compile Include="Application\ConfigRetriver\ConfigRetriver.cs" />
     <Compile Include="Application\ConfigRetriver\Configuration.cs" />
     <Compile Include="Application\ConfigRetriver\HomeAutomationModel.cs" />
@@ -92,13 +97,18 @@
     <Compile Include="HomeAutomationMain.cs" />
     <Compile Include="Logging\Logger.cs" />
     <Compile Include="Logging\Telegram\TelegramBot.cs" />
+    <Compile Include="Network\APICommand.cs" />
     <Compile Include="Network\APIStatus\ReturnStatus.cs" />
+    <Compile Include="Network\Getters\ObjectGetter.cs" />
     <Compile Include="Network\Interfaces\FindInterfaces.cs" />
     <Compile Include="Network\HTTPHandler.cs" />
     <Compile Include="Network\HTTPServer.cs" />
     <Compile Include="Network\Interfaces\VoiceInterface.cs" />
+    <Compile Include="Network\MQTTClient.cs" />
     <Compile Include="Network\NetworkInterfaces.cs" />
     <Compile Include="Network\TCPServer.cs" />
+    <Compile Include="Network\WebUI\HTMLFragment.cs" />
+    <Compile Include="Network\WebUI\HTTPWebUI.cs" />
     <Compile Include="ObjectInterface\Action.cs" />
     <Compile Include="ObjectInterface\Condition.cs" />
     <Compile Include="ObjectInterface\MethodInterface.cs" />
@@ -117,6 +127,7 @@
     <Compile Include="Objects\Lights\ILight.cs" />
     <Compile Include="Objects\Lights\RGBLight.cs" />
     <Compile Include="Objects\Lights\WLight.cs" />
+    <Compile Include="Objects\ObjectFactory.cs" />
     <Compile Include="Objects\Switches\ISwitch.cs" />
     <Compile Include="Objects\Switches\Relay.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

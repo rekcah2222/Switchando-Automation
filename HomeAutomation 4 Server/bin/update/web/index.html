@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="manifest" href="manifest.json">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>#HomeAutomation</title>
+	<script src="resources/switchando.js"></script>
+    <script src="resources/switches.js"></script>
+	<script src="resources/cookie.js"></script>
+    <script type="text/javascript">window.onload = onStartup;</script>
+    <script src="resources/jQuery.js"></script>
+    <link href="resources/material.min.css" type="text/css" rel="stylesheet">
+    <script src="resources/material.min.js"></script>
+    <link href="resources/style.css" type="text/css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <title></title>
+
+</head>
+<body class="mdl-color--grey-50">
+<!--<iframe id="forecast_embed" type="text/html" frameborder="0" height="245" width="100%" src="https://forecast.io/embed/#lat=41.8935&lon=12.4826&name=Roma&units=ca"> </iframe>
+    <br /><br /><br />-->
+    <div class="realborders" style="text-align:center" id="switches_div">
+        <h5 id="roomname"></h5>
+        <form action="#">
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                <input class="mdl-textfield__input search" type="text" id="search" style="width:100%" />
+                <label class="mdl-textfield__label" for="search" onkeypress="onChange()">Search</label>
+            </div>
+            </form>
+    </div>
+</body>        
+</html>

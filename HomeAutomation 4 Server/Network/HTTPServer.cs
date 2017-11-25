@@ -8,9 +8,9 @@ namespace HomeAutomation.Network
     public class HttpServer
     {
         private HttpListener _listener = new HttpListener();
-        private Func<HttpListenerRequest, string> _responderMethod;
+        private Func<HttpListenerContext, string> _responderMethod;
 
-        public HttpServer(string[] prefixes, Func<HttpListenerRequest, string> method)
+        public HttpServer(string[] prefixes, Func<HttpListenerContext, string> method)
         {
            
             if (!HttpListener.IsSupported)
@@ -33,7 +33,7 @@ namespace HomeAutomation.Network
             _listener.Start();
         }
 
-        public HttpServer(Func<HttpListenerRequest, string> method, params string[] prefixes)
+        public HttpServer(Func<HttpListenerContext, string> method, params string[] prefixes)
             : this(prefixes, method) { }
 
         public void Run()
@@ -51,7 +51,7 @@ namespace HomeAutomation.Network
                             try
                             {
                                 ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                                string rstr = _responderMethod(ctx.Request);
+                                string rstr = _responderMethod(ctx);
                                 byte[] buf = Encoding.UTF8.GetBytes(rstr);
                                 ctx.Response.ContentLength64 = buf.Length;
                                 ctx.Response.OutputStream.Write(buf, 0, buf.Length);

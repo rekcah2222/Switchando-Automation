@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>#HomeAutomation</title>
+	<link href="resources/material.min.css" type="text/css" rel="stylesheet">
+	<link href="resources/style.css" type="text/css" rel="stylesheet">
+	<script src="/resources/jQuery.js"></script>
+	<script src="/resources/material.min.js"></script>
+	<script src="/resources/cookie.js"></script>
+	<script src="/resources/switchando.js"></script>
+	<script src="/resources/helpers/ui-helper.js"></script>
+</head>
+<body>
+
+	<div class="realborders">
+		<h4 style="text-align:center">Add new blinds</h4>
+		<form id="form">
+			<span class="span">Name of the blinds</span>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+				<input class="mdl-textfield__input" type="text" id="name">
+				<label class="mdl-textfield__label" for="name">Blinds name</label>
+			</div>
+			<br /><br />
+			<span class="span">Friendly names of the light, separated by comma (,)</span>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+				<input class="mdl-textfield__input" type="text" id="friendlynames">
+				<label class="mdl-textfield__label" for="name">Friendly names</label>
+			</div>
+			<br /><br />
+			<span class="span">Description of the light</span>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+				<input class="mdl-textfield__input" type="text" id="description">
+				<label class="mdl-textfield__label" for="name">Description</label>
+			</div>
+			<br /><br />
+			<span class="span">Time for the blinds to open from 100% close (in seconds)</span>
+			<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+				<input class="mdl-textfield__input" type="text" id="time">
+				<label class="mdl-textfield__label" for="time">Time in seconds</label>
+			</div>
+			<br /><br />
+
+
+			<span class="span spanborder">Running in a...</span><br />
+			<div>
+				<label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="btnRaspi">
+					<input type="radio" id="btnRaspi" class="mdl-radio__button" name="createbtn" value="1" onclick="showRaspi()" checked>
+					<span class="mdl-radio__label">Raspi-Client (or local Server)</span>
+				</label>
+			</div>
+			<div>
+				<label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="btnWebRelay">
+					<input type="radio" id="btnWebRelay" class="mdl-radio__button" name="createbtn" value="2" onclick="showSonoff()">
+					<span class="mdl-radio__label">Web Relay API (e.g. Sonoff)</span>
+				</label>
+			</div>
+			<br /><br />
+
+
+			<div id="raspiclient">
+				<span class="span spanborder">Select the Raspi-Client</span><br />
+				<div>
+					<select style="width:100%;height:30px;" id="client_select">
+						<option value="volvo" disabled>Choose the Raspi-Client</option>
+					</select>
+				</div>
+				<br /><br />
+				<div>
+					<span class="span spanborder">GPIO Pins</span><br />
+					<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell--1-col">
+						<input class="mdl-textfield__input" type="text" pattern="-?[0-9]*(\.[0-9]+)?" id="openpin">
+						<label class="mdl-textfield__label" for="openpin">Open Pin</label>
+						<span class="mdl-textfield__error">Input is not a number!</span>
+					</div>
+					<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell--1-col">
+						<input class="mdl-textfield__input" type="text" pattern="-?[0-9]*(\.[0-9]+)?" id="closepin">
+						<label class="mdl-textfield__label" for="closepin">Close Pin</label>
+						<span class="mdl-textfield__error">Input is not a number!</span>
+					</div>
+				</div>
+			</div>
+			<div id="webrelay" style="display:none">
+				<span class="span">Open WEB Relay's ID (remeber that ID is not the name)</span>
+				<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+					<input class="mdl-textfield__input" type="text" id="openwebrelayid">
+					<label class="mdl-textfield__label" for="openwebrelayid">Open WEB Relay's ID</label>
+				</div><br /><br />
+				<span class="span">Close WEB Relay's ID (remeber that ID is not the name)</span>
+				<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:100%">
+					<input class="mdl-textfield__input" type="text" id="closewebrelayid">
+					<label class="mdl-textfield__label" for="closewebrelayid">Close WEB Relay's ID</label>
+				</div>
+			</div>
+
+			<br /><br />
+			<span class="span spanborder">Select the room</span><br />
+			<div>
+				<select style="width:100%;height:30px;" id="room_select">
+					<option value="Choose the room" disabled>Choose the room</option>
+				</select>
+			</div>
+			<br /><br />
+
+			<button class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" style="width:100%" onclick="addBlinds(form)">
+				ADD BLINDS
+			</button>
+		</form>
+	</div>
+	<script>
+        function showSonoff()
+        {
+            document.getElementById("webrelay").style.display = "inline";
+            document.getElementById("raspiclient").style.display = "none";
+        }
+        function showRaspi() {
+            document.getElementById("webrelay").style.display = "none";
+            document.getElementById("raspiclient").style.display = "inline";
+        }
+
+		loadClients(); //check
+		loadRooms(); //check
+		$('#form').submit(function () {
+			var name = $('#name').val();
+			var friendlynames = $('#friendlynames').val();
+			var description = $('#description').val();
+			var room = $('#room_select').val();
+			var totalsteps = $('#time').val();
+
+			if (document.getElementById("btnRaspi").checked) {
+				var openpin = $('#openpin').val();
+				var closepin = $('#closepin').val();
+				var client = $('#client_select').val();
+
+				//first request
+			} else {
+				var openpin = $('#openwebrelayid').val();
+				var closepin = $('#closewebrelayid').val();
+				var client = "local";
+		    }
+
+
+
+			var server = new Switchando();
+			var response = server.sendCommand("generic_switch/createRelay?objname=" + name + "&setfriendlynames=" + friendlynames + "&pin=" + pin + "&description=" + description + "&client=" + client + "&room=" + room);
+			var parsed = JSON.parse(response);
+			if (parsed.status == 0) {
+				return true;
+			} else {
+				alert("Server error:\n" + parsed.description);
+				return false;
+			}
+		});
+
+		function addBlinds(id) {
+    var name = id.name.value;
+    var friendlynames = id.friendlynames.value;
+    var description = id.description.value;
+    var room = id.room_select.value;
+    var totalsteps = id.time.value;
+
+    if (document.getElementById("btnRaspi").checked)
+    {
+        var openpin = id.openpin.value;
+        var closepin = id.closepin.value;
+        var client = id.client_select.value;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', get('protocol') + '://' + get('ip') + "/api?interface=configuration&addblinds=" + name + "&description=" + description + "&setfriendlynames=" + friendlynames + "&openpin=" + openpin + "&closepin=" + closepin + "&totalsteps=" + totalsteps + "&client=" + client + "&room=" + room + "&password=" + get('password'), false);
+        xhr.send();
+    }
+    else
+    {
+        var openpin = id.openwebrelayid.value;
+        var closepin = id.closewebrelayid.value;
+        var client = "local";
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', get('protocol') + '://' + get('ip') + "/api?interface=configuration&addblinds=" + name + "&description=" + description + "&setfriendlynames=" + friendlynames + "&webrelayopenid=" + openpin + "&webrelaycloseid=" + closepin + "&totalsteps=" + totalsteps + "&client=" + client + "&room=" + room + "&password=" + get('password'), false);
+        xhr.send();
+    }
+
+    alert("Request sent! Please return back");
+}
+
+	</script>
+</body>
+</html>

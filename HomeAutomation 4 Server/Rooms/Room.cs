@@ -1,9 +1,9 @@
 ﻿using HomeAutomation.Dictionaries;
-using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects;
 using HomeAutomation.Objects.Lights;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using System;
 using System.Collections.Generic;
@@ -24,29 +24,16 @@ namespace HomeAutomation.Rooms
             this.FriendlyNames = friendlyNames;
             this.Objects = new List<IObject>();
             HomeAutomationServer.server.Rooms.Add(this);
-
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("room")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("room", requestHandler);
-        }
-        public Room()
-        {
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("room", requestHandler);
         }
         public void AddItem(IObject homeAutomationObject)
         {
             this.Objects.Add(homeAutomationObject);
         }
-        public void Switch(bool status)
+        public void Switch(bool status, Identity login)
         {
             foreach (IObject item in Objects)
             {
+                if (!login.HasAccess(item)) continue;
                 if (item is ISwitch)
                 {
                     if (status) ((ISwitch)item).Start(); else ((ISwitch)item).Stop();
@@ -64,27 +51,25 @@ namespace HomeAutomation.Rooms
                 }*/
             }
         }
-        public void Color(uint R, uint G, uint B, int dimmer)
+        public void Color(uint R, uint G, uint B, int dimmer, Identity login)
         {
             HomeAutomationServer.server.Telegram.Log("Changing color of room `" + this.Name + "`.");
             foreach (IObject item in Objects)
             {
+                if (!login.HasAccess(item)) continue;
                 if (item.GetObjectType().Equals("LIGHT_GPIO_RGB"))
                 {
-                        ((IColorableLight)item).Set(R, G, B, dimmer);
-                        Thread.Sleep(1000);
-                    /*else if (item.GetType().Equals(typeof(RGBLight)))
-                    {
-                        ((RGBLight)item).Set(R, G, B, dimmer);
-                    }*/
+                    ((IColorableLight)item).Set(R, G, B, dimmer);
+                    Thread.Sleep(1000);
                 }
             }
         }
-        public void Dimm(uint percentace, int dimmer)
+        public void Dimm(uint percentace, int dimmer, Identity login)
         {
             HomeAutomationServer.server.Telegram.Log("Dimming room `" + this.Name + "` to `" + percentace + "%`" + "(" + dimmer + "ms).");
             foreach (IObject item in Objects)
             {
+                if (!login.HasAccess(item)) continue;
                 if (item.GetObjectType().Equals("LIGHT_GPIO_RGB") || item.GetObjectType().Equals("LIGHT_GPIO_W"))
                 {
                     ((ILight)item).Dimm(percentace, dimmer);
@@ -108,7 +93,7 @@ namespace HomeAutomation.Rooms
             }
             return room;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("changeColor/RGB"))
             {
@@ -139,17 +124,15 @@ namespace HomeAutomation.Rooms
                             dimmer = int.Parse(command[1]);
                             break;
                     }
-                    if (room == null) return "ADD ERROR API";
+                    if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
                 }
-                room.Color(R, G, B, dimmer);
-                return "ADD STATUS API";
+                room.Color(R, G, B, dimmer, login);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
-
             if (method.Equals("changeColor/name"))
             {
-                return "NOT IMPLEMENTED";
+                return new ReturnStatus(CommonStatus.ERROR_NOT_IMPLEMENTED, "Switch from color name is not implemented yet, but it's in queue").Json();
             }
-
             if (method.Equals("switch"))
             {
                 Room room = null;
@@ -167,10 +150,10 @@ namespace HomeAutomation.Rooms
                             status = bool.Parse(command[1]);
                             break;
                     }
-                    if (room == null) return "ADD ERROR API";
+                    if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
                 }
-                room.Switch(status);
-                return "";
+                room.Switch(status, login);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
             if (method.Equals("dimm"))
             {
@@ -193,13 +176,14 @@ namespace HomeAutomation.Rooms
                             dimmer = int.Parse(command[1]);
                             break;
                     }
-                    if (room == null) return "ADD ERROR API";
+                    if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
                 }
-                room.Dimm(dimm_percentage, dimmer);
-                return "";
+                room.Dimm(dimm_percentage, dimmer, login);
+                return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
             if (method.Equals("createRoom"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 bool hiddenRoom = false;
                 string[] friendlyNames = null;
@@ -247,85 +231,7 @@ namespace HomeAutomation.Rooms
                 data.Object.room = room;
                 return data.Json();
             }
-            if (string.IsNullOrEmpty(method))
-            {
-                Room room = null;
-                uint R = 0;
-                uint G = 0;
-                uint B = 0;
-                int dimmer = 0;
-                string color = null;
-                uint dimm_percentage = 400;
-                string status = null;
-
-                foreach (string cmd in request)
-                {
-                    string[] command = cmd.Split('=');
-                    if (command[0].Equals("interface")) continue;
-                    switch (command[0])
-                    {
-                        case "objname":
-                            foreach (Room obj in HomeAutomationServer.server.Rooms)
-                            {
-                                if (obj.Name.ToLower().Equals(command[1].ToLower()))
-                                {
-                                    room = (Room)obj;
-                                }
-                                if (Array.IndexOf(obj.FriendlyNames, command[1].ToLower()) > -1)
-                                {
-                                    room = (Room)obj;
-                                }
-                            }
-                            break;
-
-                        case "R":
-                            R = uint.Parse(command[1]);
-                            break;
-
-                        case "G":
-                            G = uint.Parse(command[1]);
-                            break;
-
-                        case "B":
-                            B = uint.Parse(command[1]);
-                            break;
-
-                        case "dimmer":
-                            dimmer = int.Parse(command[1]);
-                            break;
-
-                        case "color":
-                            color = command[1];
-                            break;
-
-                        case "percentage":
-                            dimm_percentage = uint.Parse(command[1]);
-                            break;
-
-                        case "switch":
-                            status = command[1];
-                            break;
-                    }
-                }
-                if (status != null)
-                {
-                    room.Switch(bool.Parse(status));
-                    return "";
-                }
-                if (color != null)
-                {
-                    uint[] vls = ColorConverter.ConvertNameToRGB(color);
-                    room.Color(vls[0], vls[1], vls[2], dimmer);
-                    return "";
-                }
-                if (dimm_percentage != 400)
-                {
-                    room.Dimm(dimm_percentage, dimmer);
-                    return "";
-                }
-                room.Color(R, G, B, dimmer);
-            }
-            return "";
+            return new ReturnStatus(CommonStatus.ERROR_NOT_IMPLEMENTED).Json();
         }
     }
 }

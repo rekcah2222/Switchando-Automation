@@ -1,5 +1,8 @@
-﻿using HomeAutomation.Objects;
+﻿using HomeAutomation.Network.APIStatus;
+using HomeAutomation.Objects;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using Newtonsoft.Json;
 using System;
@@ -19,38 +22,15 @@ namespace HomeAutomation.Network
             server.Run();
         }
 
-        public static string SendResponse(HttpListenerRequest request)
-        {            
-            string url = request.Url.PathAndQuery.Substring(1);
+        public static string SendResponse(HttpListenerContext ctx)
+        {
+            var request = ctx.Request;
+            string url = request.Url.PathAndQuery.Substring(5);
             url = HttpUtility.UrlDecode(url);
+            Console.WriteLine("HTTP API command (from " + request.RemoteEndPoint.ToString() + ") -> " + url);
 
-            if (url.Contains("get=devices"))
-            {
-                return JsonConvert.SerializeObject(HomeAutomationServer.server.Objects);
-            }
-            if (url.Contains("get=switchabledevices"))
-            {
-                System.Collections.Generic.List<ISwitch> switchables = new System.Collections.Generic.List<ISwitch>();
-                foreach (IObject iobj in HomeAutomationServer.server.Objects)
-                {
-                    if (iobj is ISwitch)
-                    {
-                        switchables.Add((ISwitch)iobj);
-                    }
-                }
-                return JsonConvert.SerializeObject(switchables);
-            }
-            if (url.Contains("get=rooms"))
-            {
-                return JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms);
-            }
-            if (url.Contains("get=clients"))
-            {
-                var json = JsonConvert.SerializeObject(HomeAutomationServer.server.Clients);
-                return json;
-            }
+            //if (!url.Contains("&password=" + HomeAutomationServer.server.GetPassword())) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST, "Invalid password").Json();
 
-            //CHECK PASSWORD
             string[] interfaceMethod = url.Split('/');
             string netInterface = null;
             string methodsRaw;
@@ -59,44 +39,65 @@ namespace HomeAutomation.Network
             string method = methodsRaw.Split('?')[0];
             string[] parameters = methodsRaw.Split('?')[1].Split('&');
 
+            string username = null;
+            string password = null;
+            string token = null;
+
+            foreach (string cmd in parameters)
+            {
+                string[] command = cmd.Split('=');
+                switch (command[0])
+                {
+                    case "login_username":
+                        username = command[1];
+                        break;
+                    case "login_password":
+                        password = command[1];
+                        break;
+                    case "login_token":
+                        token = command[1];
+                        break;
+                }
+            }
+
+            Identity login = null;
+            if (password != null) login = Identity.StaticLogin(username, password);
+            if (token != null) login = Identity.StaticSessionLogin(username, token, request.RemoteEndPoint.ToString());
+            if (login == null && token == null) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Wrong username and / or password").Json();
+            if (login == null && password == null) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Invalid session").Json();
+
+            if (netInterface.StartsWith("id"))
+            {
+                string[] dataRaw = method.Split('/');
+                NetworkInterface nInterface = null;
+
+                foreach (IObject iobj in HomeAutomationServer.server.Objects)
+                {
+                    if (iobj.GetName().Equals(dataRaw[0])) nInterface = iobj.GetInterface();
+                }
+                foreach (Room iobj in HomeAutomationServer.server.Rooms)
+                {
+                    if (iobj.Name.Equals(dataRaw[0])) nInterface = NetworkInterface.FromId("ROOM");
+                }
+                if (nInterface == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, dataRaw[0] + " not found").Json();
+
+                method = method.Substring(dataRaw[0].Length + 1);
+                string returnMessage = nInterface.Run(method, parameters, login);
+                File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json", JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms));
+                HomeAutomationServer.server.ObjectNetwork.Save();
+                return returnMessage;
+            }
             foreach (NetworkInterface networkInterface in HomeAutomationServer.server.NetworkInterfaces)
             {
                 if (networkInterface.Id.ToLower().Equals(netInterface))
                 {
-                    string returnMessage = networkInterface.Run(method, parameters);
+                    string returnMessage = networkInterface.Run(method, parameters, login);
                     File.WriteAllText(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "/configuration.json", JsonConvert.SerializeObject(HomeAutomationServer.server.Rooms));
                     HomeAutomationServer.server.ObjectNetwork.Save();
                     return returnMessage;
                 }
             }
-
-            string message = request.Url.Query.Substring(1);
-            message = HttpUtility.UrlDecode(message);
-            Console.WriteLine(message);
-
-            if (!message.Contains("&password=" + HomeAutomationServer.server.GetPassword())) return "INVALID PASSWORD";
-
-            
-
-            string[] commands = message.Split('&');
-
-            string[] icommand = commands[0].Split('=');
-            if (icommand[0].Equals("interface"))
-            {
-                foreach (NetworkInterface networkInterface in HomeAutomationServer.server.NetworkInterfaces)
-                {
-                    if (networkInterface.Id.Equals(icommand[1]))
-                    {
-                        return networkInterface.Run(null, commands);
-                    }
-                }
-            }
-            else if (icommand[0].Equals("objname"))
-            {
-                return NetworkInterface.FromId("auto").Run(null, commands);
-            }
-
-            return string.Format("<HTML><BODY>HomeAutomation 4 is running!<br />" + request.Url.Query + "<br />{0}</BODY></HTML>", DateTime.Now);
+            return string.Format("<html><body>Switchando Automation is running!<br />" + request.Url.Query + "<br />{0}</body></html>", DateTime.Now);
         }
     }
 }

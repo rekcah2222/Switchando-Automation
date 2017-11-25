@@ -1,10 +1,12 @@
 ﻿using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -30,7 +32,7 @@ namespace HomeAutomation.ObjectInterfaces
             this.Conditions = conditions;
             HomeAutomationServer.server.ObjectNetwork.Objects.Actions.Add(this);
         }
-        public string Run()
+        public string Run(Identity login)
         {
             foreach(Condition condition in Conditions)
             {
@@ -39,7 +41,7 @@ namespace HomeAutomation.ObjectInterfaces
                     return new ReturnStatus(CommonStatus.SUCCESS, "Action didn't run because of some unverified conditions").Json();
                 }
             }
-            return Method.Run(Parameters);
+            return Method.Run(Parameters, login);
         }
         public static Action FromName(string name)
         {
@@ -49,10 +51,11 @@ namespace HomeAutomation.ObjectInterfaces
             }
             return null;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("createAction"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 /*string[] dataRow = method.Substring("createAction/".Length).Split('/');
                 if (dataRow == null || dataRow[0] == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
 
@@ -61,6 +64,7 @@ namespace HomeAutomation.ObjectInterfaces
                 string description = null;
 
                 string methodInterface = null;
+                string device = null;
                 string methodName = null;
                 string jsonParameters = null;
                 string jsonConditions = null;
@@ -80,6 +84,9 @@ namespace HomeAutomation.ObjectInterfaces
                         case "interface":
                             methodInterface = command[1];
                             break;
+                        case "device":
+                            device = command[1];
+                            break;
                         case "method":
                             methodName = command[1];
                             break;
@@ -87,25 +94,47 @@ namespace HomeAutomation.ObjectInterfaces
                             jsonParameters = command[1];
                             break;
                         case "conditions":
-                            jsonConditions = command[1];
+                            jsonConditions = cmd.Substring(command[0].Length + 1);
                             break;
                     }
                 }
                 if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(description)) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
 
-                actionMethod = MethodInterface.FromString(methodInterface, methodName);
+                if (methodInterface != null)
+                {
+                    actionMethod = MethodInterface.FromString(methodInterface, methodName);
+                }
+                else
+                {
+                    IObject iobj = ObjectFactory.FromString(device);
+                    if (iobj == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Device not found").Json();
+                    var methods = MethodInterface.GetMethodsFromObject(iobj);
+                    foreach (MethodInterface mthd in methods)
+                    {
+                        if (mthd.Name.Equals(methodName)) actionMethod = mthd;
+                    }
+                }
                 if (actionMethod == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Method not found").Json();
 
                 Dictionary<string, object> parameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonParameters);
 
+                //List<Condition> conditions = new List<Condition>();
                 Condition[] conditions = new Condition[0];
                 if (!string.IsNullOrEmpty(jsonConditions))
                 {
-                    jsonConditions = jsonConditions.Replace(@"\", string.Empty);
-                    conditions = JsonConvert.DeserializeObject<Condition[]>(Regex.Unescape(jsonConditions));
+                    jsonConditions = Regex.Unescape(jsonConditions);
+                    //jsonConditions = jsonConditions.Replace(@"\", string.Empty);
+                    conditions = JsonConvert.DeserializeObject<Condition[]>(jsonConditions);
+                   /* foreach (dynamic cond in conds)
+                    {
+                        ObjectInterface objInt = (ObjectInterface)cond.Property;
+                        object value = cond.Value;
+                        string swObj = (string)cond.SwitchandoObject;
+                        conditions.Add(new Condition(swObj, objInt, value));
+                    }*/
                 }
 
-                Action action = new Action(name, description, actionMethod, parameters, conditions);
+                Action action = new Action(name, description, actionMethod, parameters, conditions.ToArray());
 
                 ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
                 data.Object.action = action;
@@ -146,7 +175,7 @@ namespace HomeAutomation.ObjectInterfaces
                 }
                 if (action == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
 
-                return action.Run();
+                return action.Run(login);
             }
 
             return new ReturnStatus(CommonStatus.ERROR_NOT_IMPLEMENTED, "Not implemented").Json();

@@ -1,4 +1,6 @@
-﻿using HomeAutomationCore;
+﻿using HomeAutomation.Network;
+using HomeAutomation.Users;
+using HomeAutomationCore;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
@@ -21,6 +23,7 @@ namespace HomeAutomation.ObjectInterfaces
             }
             if (Objects == null) Objects = new NetworkObjects();
             if (Objects.Actions == null) Objects.Actions = new List<Action>();
+            if (Objects.Identities == null) Objects.Identities = new List<Identity>();
         }
         public void Save()
         {
@@ -29,6 +32,8 @@ namespace HomeAutomation.ObjectInterfaces
         public class NetworkObjects
         {
             public List<Action> Actions { get; set; }
+            public List<Identity> Identities { get; set; }
+            public MQTTClient MQTTClient { get; set; }
         }
     }
 }

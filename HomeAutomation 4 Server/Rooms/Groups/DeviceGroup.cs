@@ -1,8 +1,10 @@
 ﻿using HomeAutomation.Dictionaries;
 using HomeAutomation.Network;
+using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects;
 using HomeAutomation.Objects.Lights;
 using HomeAutomation.Objects.Switches;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using System;
 using System.Collections.Generic;
@@ -128,7 +130,7 @@ namespace HomeAutomation.Rooms
             }
             return myobj;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("changeColor/RGB"))
             {
@@ -161,6 +163,7 @@ namespace HomeAutomation.Rooms
                     }
                     if (room == null) return "ADD ERROR API";
                 }
+                if (!login.HasAccess(room)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 room.Color(R, G, B, dimmer);
                 return "ADD STATUS API";
             }
@@ -189,6 +192,7 @@ namespace HomeAutomation.Rooms
                     }
                     if (room == null) return "ADD ERROR API";
                 }
+                if (!login.HasAccess(room)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 room.SwitchGroup(status);
                 return "";
             }
@@ -215,12 +219,14 @@ namespace HomeAutomation.Rooms
                     }
                     if (room == null) return "ADD ERROR API";
                 }
+                if (!login.HasAccess(room)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 room.Dimm(dimm_percentage, dimmer);
                 return "";
             }
 
             if (string.IsNullOrEmpty(method))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 DeviceGroup room = null;
                 uint R = 0;
                 uint G = 0;

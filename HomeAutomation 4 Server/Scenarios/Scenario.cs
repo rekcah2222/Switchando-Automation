@@ -1,15 +1,8 @@
 ﻿using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
-using HomeAutomation.ObjectInterfaces;
+using HomeAutomation.Users;
 using HomeAutomationCore;
-using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HomeAutomation.Scenarios
 {
@@ -24,10 +17,6 @@ namespace HomeAutomation.Scenarios
             this.Name = name;
             this.Description = description;
             HomeAutomationServer.server.Scenarios.Add(this);
-            SaveAll();
-
-            NetworkInterface.Delegate requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("scenario", requestHandler);
         }
 
         public static void SaveAll()
@@ -62,18 +51,19 @@ namespace HomeAutomation.Scenarios
             SaveAll();
         }
 
-        public void Run()
+        public void Run(Identity login)
         {
             foreach (string action in Actions)
             {
-                ObjectInterfaces.Action.FromName(action).Run();
+                ObjectInterfaces.Action.FromName(action).Run(login);
             }
         }
 
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("createScenario"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string description = null;
                 foreach (string cmd in request)
@@ -96,6 +86,7 @@ namespace HomeAutomation.Scenarios
             }
             if (method.Equals("addAction"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 Scenario scenario = null;
 
                 string name = null;
@@ -130,6 +121,7 @@ namespace HomeAutomation.Scenarios
             }
             if (method.Equals("removeAction"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 Scenario scenario = null;
 
                 string name = null;
@@ -185,7 +177,7 @@ namespace HomeAutomation.Scenarios
                 }
                 if (scenario == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Scenario not found").Json();
 
-                scenario.Run();
+                scenario.Run(login);
 
                 ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
                 return data.Json();

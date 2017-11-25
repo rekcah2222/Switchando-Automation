@@ -1,9 +1,4 @@
 ﻿using HomeAutomation.Objects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HomeAutomation.ObjectInterfaces
 {
@@ -11,32 +6,32 @@ namespace HomeAutomation.ObjectInterfaces
     {
         public ObjectInterface Property;
         public object Value;
-        public string Device;
-        private IObject SwitchandoObject;
+        public string SwitchandoObject;
         public Condition(string device, ObjectInterface property, object value)
         {
-            foreach(IObject iobj in HomeAutomationCore.HomeAutomationServer.server.Objects)
-            {
-                if (iobj.GetName().Equals(device))
-                {
-                    SwitchandoObject = iobj;
-                }
-            }
+            this.SwitchandoObject = device;
             this.Property = property;
             this.Value = value;
-            this.Device = device;
         }
         public bool Verify()
         {
-            if (ObjectInterface.GetPropertyValue(SwitchandoObject, Property.Name).GetType().Equals(Property.Type))
+            foreach (IObject iobj in HomeAutomationCore.HomeAutomationServer.server.Objects)
             {
-                if (ObjectInterface.GetPropertyValue(SwitchandoObject, Property.Name).Equals(Value))
+                if (iobj.GetName().Equals(SwitchandoObject))
                 {
-                    return true;
-                }
-                else
-                {
-                    return false;
+                    object vle = ObjectInterface.GetPropertyValue(iobj, Property.Name);
+                    if (vle.Equals(Value))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        if (vle.ToString().ToLower().Equals(Value.ToString().ToLower()))
+                        {
+                            return true;
+                        }
+                        return false;
+                    }
                 }
             }
             return false;

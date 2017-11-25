@@ -1,4 +1,4 @@
-﻿using HomeAutomationCore;
+﻿/*using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using Newtonsoft.Json;
 using System;
@@ -102,3 +102,4 @@ namespace HomeAutomation.Network
         }
     }
 }
+*/

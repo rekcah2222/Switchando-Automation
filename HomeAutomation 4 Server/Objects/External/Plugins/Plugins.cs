@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HomeAutomation.Objects.External.Plugins
 {
@@ -41,8 +39,8 @@ namespace HomeAutomation.Objects.External.Plugins
                 IPlugin plugin = (IPlugin)Activator.CreateInstance(type);
                 Console.WriteLine("Registering plugin " + plugin.GetName() + " by " + plugin.GetDeveloper() + "...");
                 PluginsList.Add(plugin);
-                Console.WriteLine("Sucessfully enabled " + plugin.GetName());
-                plugin.OnEnable();
+                Console.WriteLine("Sucessfully loaded " + plugin.GetName());
+                Console.WriteLine("[" + plugin.GetName() + "] (OnEnable) " + plugin.OnEnable());
             }
         }
     }

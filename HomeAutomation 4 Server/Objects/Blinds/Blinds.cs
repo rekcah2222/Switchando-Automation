@@ -1,9 +1,11 @@
-﻿using HomeAutomation.Network;
+﻿using HomeAutomation.Application.ConfigRetriver;
+using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects.External;
 using HomeAutomation.Objects.Fans;
 using HomeAutomation.Objects.Switches;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -34,13 +36,6 @@ namespace HomeAutomation.Objects.Blinds
 
         public Blinds()
         {
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("blinds")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("blinds", requestHandler);
         }
         public Blinds(Client client, string name, ISwitch openDevice, ISwitch closeDevice, int totalSteps, string description, string[] friendlyNames)
         {
@@ -53,22 +48,16 @@ namespace HomeAutomation.Objects.Blinds
             this.TotalSteps = totalSteps;
             this.ClientName = client.Name;
 
-            HomeAutomationServer.server.Objects.Add(this);
+            //quella roba
 
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("blinds")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("blinds", requestHandler);
+            HomeAutomationServer.server.Objects.Add(this);
         }
 
         public void Start()
         {
             if (!Client.Name.Equals("local"))
             {
-                Client.Sendata("interface=blinds&objname=" + this.Name + "&switch=true");
+                Client.Sendata("BLINDS/switch?objname=" + this.Name + "&switch=true");
                 return;
             }
             if (isMoving)
@@ -85,7 +74,7 @@ namespace HomeAutomation.Objects.Blinds
         {
             if (!Client.Name.Equals("local"))
             {
-                Client.Sendata("interface=blinds&objname=" + this.Name + "&switch=false");
+                Client.Sendata("BLINDS/switch?objname=" + this.Name + "&switch=false");
                 return;
             }
             if (isMoving)
@@ -107,7 +96,7 @@ namespace HomeAutomation.Objects.Blinds
                 Console.WriteLine(d);
                 int percentage = (int)Math.Round(d * 100d);
                 Console.WriteLine(percentage);
-                Client.Sendata("interface=blinds&objname=" + this.Name + "&percentage=" + percentage);
+                Client.Sendata("BLINDS/move?objname=" + this.Name + "&value=" + percentage);
                 return;
             }
             if (isMoving)
@@ -124,7 +113,7 @@ namespace HomeAutomation.Objects.Blinds
         {
             int step = (int)data;
 
-            if (step <= Step)
+            if (step < Step)
             {
                 OpenDevice.Start();
                 for (int pos = Step; pos >= step; pos--)
@@ -172,7 +161,7 @@ namespace HomeAutomation.Objects.Blinds
         }
         public NetworkInterface GetInterface()
         {
-            return NetworkInterface.FromId("blinds");
+            return NetworkInterface.FromId(ObjectType);
         }
         public string[] GetFriendlyNames()
         {
@@ -197,7 +186,7 @@ namespace HomeAutomation.Objects.Blinds
             }
             return blinds;
         }
-        static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("switch"))
             {
@@ -218,6 +207,7 @@ namespace HomeAutomation.Objects.Blinds
                     }
                 }
                 if (blinds == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                if (!login.HasAccess(blinds)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 if (status) blinds.Start(); else blinds.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
@@ -243,6 +233,7 @@ namespace HomeAutomation.Objects.Blinds
                 if (blinds == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 double prestep = (percentage / 100d) * blinds.TotalSteps;
                 int step = (int)Math.Round(prestep);
+                if (!login.HasAccess(blinds)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 blinds.Move(step);
 
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
@@ -250,6 +241,7 @@ namespace HomeAutomation.Objects.Blinds
 
             if (method.Equals("internal/updateStep"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 Blinds blinds = null;
                 int percentage = 255;
 
@@ -271,21 +263,17 @@ namespace HomeAutomation.Objects.Blinds
 
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
-            if (method.Equals("createNewBlinds"))
+            if (method.Equals("createBlinds"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string[] friendlyNames = null;
                 string description = null;
                 Client client = null;
                 Room room = null;
-
-                uint openPin = 0;
-                uint closePin = 0;
-
-                byte totalsteps = 0;
-
-                string webrelayOpenId = null;
-                string webrelayCloseId = null;
+                string openDevice = null;
+                string closeDevice = null;
+                int totalSteps = 0;
 
                 foreach (string cmd in request)
                 {
@@ -293,7 +281,7 @@ namespace HomeAutomation.Objects.Blinds
                     if (command[0].Equals("interface")) continue;
                     switch (command[0])
                     {
-                        case "addblinds":
+                        case "objname":
                             name = command[1];
                             break;
                         case "description":
@@ -303,38 +291,15 @@ namespace HomeAutomation.Objects.Blinds
                             string names = command[1];
                             friendlyNames = names.Split(',');
                             break;
-
-                        case "openpin":
-                            string pinStr = command[1];
-                            openPin = uint.Parse(pinStr);
+                        case "open_device":
+                            openDevice = command[1];
                             break;
-                        case "closepin":
-                            pinStr = command[1];
-                            closePin = uint.Parse(pinStr);
+                        case "close_device":
+                            closeDevice = command[1];
                             break;
-                        case "webrelayopenid":
-                            webrelayOpenId = command[1];
-                            break;
-                        case "webrelaycloseid":
-                            webrelayCloseId = command[1];
-                            break;
-
                         case "totalsteps":
-                            totalsteps = byte.Parse(command[1]);
+                            totalSteps = int.Parse(command[1]);
                             break;
-
-                        case "client":
-                            string clientName = command[1];
-                            foreach (Client clnt in HomeAutomationServer.server.Clients)
-                            {
-                                if (clnt.Name.Equals(clientName))
-                                {
-                                    client = clnt;
-                                }
-                            }
-                            if (client == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Raspi-Client not found").Json();
-                            break;
-
                         case "room":
                             foreach (Room stanza in HomeAutomationServer.server.Rooms)
                             {
@@ -346,127 +311,96 @@ namespace HomeAutomation.Objects.Blinds
                             break;
                     }
                 }
-                if (room == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Room not found").Json();
-                if (openPin == closePin && webrelayOpenId != null && webrelayCloseId != null)
+                if (name == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                if (description == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                if (openDevice == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                if (closeDevice == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                if (room == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+                if (totalSteps == 0) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
+
+                IObject openObj = ObjectFactory.FromString(openDevice);
+                IObject closeObj = ObjectFactory.FromString(closeDevice);
+
+                if (openObj == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Open device was not found").Json();
+                if (closeObj == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Close device was not found").Json();
+                if (openObj is ISwitch) { } else return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Open device is not on/off switchable").Json();
+                if (closeObj is ISwitch) { } else return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND, "Close device is not on/off switchable").Json();
+
+                /*if (((dynamic)openObj).ClientName != null && ((dynamic)closeObj).ClientName != null)
                 {
-                    WebRelay openRelay = new WebRelay(name + "_openrelay", webrelayOpenId, "", new string[0]);
-                    WebRelay closeRelay = new WebRelay(name + "_closerelay", webrelayCloseId, "", new string[0]);
-                    Blinds blinds = new Blinds(client, name, openRelay, closeRelay, totalsteps, description, friendlyNames);
-                    room.AddItem(blinds);
-                    ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
-                    data.Object.blinds = blinds;
-                    return data.Json();
+                    if ((((dynamic)openObj).ClientName).Equals((((dynamic)closeObj).ClientName)))
+                    {
+                        client = Client.GetCreateClient((((dynamic)openObj).ClientName));
+                    }
+                    else
+                    {
+                        client = Client.GetCreateClient("local");
+                        
+                    }
                 }
                 else
                 {
-                    Relay openRelay = new Relay(client, name + "_openrelay", openPin, "", new string[0]);
-                    Relay closeRelay = new Relay(client, name + "_closerelay", closePin, "", new string[0]);
-                    Blinds blinds = new Blinds(client, name, openRelay, closeRelay, totalsteps, description, friendlyNames);
-                    room.AddItem(blinds);
-                    ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
-                    data.Object.blinds = blinds;
-                    return data.Json();
-                }
-            }
-            if (string.IsNullOrEmpty(method))
-            {
-                Blinds blinds = null;
+                    client = Client.GetCreateClient("local");
+                }*/
+                client = Client.GetCreateClient("local"); //tmp
 
-                foreach (string cmd in request)
+                if (client == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST, "Internal error: client is null").Json();
+
+                foreach (Room iRoom in HomeAutomationServer.server.Rooms)
                 {
-                    string[] command = cmd.Split('=');
-                    if (command[0].Equals("interface")) continue;
-                    switch (command[0])
+                    if (iRoom.Objects.Contains(openObj))
                     {
-                        case "objname":
-                            foreach (IObject obj in HomeAutomationServer.server.Objects)
-                            {
-                                if (obj.GetName().ToLower().Equals(command[1].ToLower()))
-                                {
-                                    blinds = (Blinds)obj;
-                                    break;
-                                }
-                                if (obj.GetFriendlyNames() == null) continue;
-                                if (Array.IndexOf(obj.GetFriendlyNames(), command[1].ToLower()) > -1)
-                                {
-                                    blinds = (Blinds)obj;
-                                    break;
-                                }
-                            }
-                            break;
-                        case "percentage":
-                            int percentage = int.Parse(command[1]);
-                            //Console.WriteLine(blinds.TotalSteps);
-                            double prestep = (percentage / 100d) * blinds.TotalSteps;
-                            int step = (int)Math.Round(prestep);
-                            blinds.Move(step);
-                            return "";
-                        case "switch":
-                            bool status = bool.Parse(command[1]);
-                            if (status) blinds.Start(); else blinds.Stop();
-                            return "";
-                        case "update":
-                            blinds.Step = int.Parse(command[1]);
-                            return "";
-
+                        iRoom.Objects.Remove(openObj);
+                    }
+                    if (iRoom.Objects.Contains(closeObj))
+                    {
+                        iRoom.Objects.Remove(closeObj);
                     }
                 }
+                //HomeAutomationServer.server.Objects.Remove(openObj);
+                //HomeAutomationServer.server.Objects.Remove(closeObj);
+
+                Blinds blinds = new Blinds(client, name, (ISwitch)openObj, (ISwitch)closeObj, totalSteps, description, friendlyNames);
+                room.AddItem(blinds);
+                ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
+                data.Object.blinds = blinds;
+                return data.Json();
             }
-            return "";
+            return new ReturnStatus(CommonStatus.ERROR_NOT_IMPLEMENTED).Json();
         }
         public static void Setup(Room room, dynamic device)
         {
-            ISwitch openDevice;
-            ISwitch closeDevice;
-            if (device.OpenDevice.ObjectType == "EXTERNAL_SWITCH")
+            string openDeviceId = device.OpenDevice.Name;
+            string closeDeviceId = device.CloseDevice.Name;
+            if (device.OpenDevice.ClientName != null)
             {
-                WebRelay relay = new WebRelay();
-                relay.Name = device.OpenDevice.Name;
-                relay.Description = device.OpenDevice.Description;
-                relay.Switch = device.OpenDevice.Switch;
-                relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-                relay.Online = device.OpenDevice.Online;
-                relay.ID = device.OpenDevice.ID;
-                openDevice = relay;
-
-                HomeAutomationServer.server.Objects.Add(relay);
-
-                relay = new WebRelay();
-                relay.Name = device.CloseDevice.Name;
-                relay.Description = device.CloseDevice.Description;
-                relay.Switch = device.CloseDevice.Switch;
-                relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-                relay.Online = device.CloseDevice.Online;
-                relay.ID = device.CloseDevice.ID;
-                closeDevice = relay;
-
-                HomeAutomationServer.server.Objects.Add(relay);
+                device.OpenDevice.Client = Client.GetCreateClient(device.OpenDevice.ClientName);
             }
-            else
+            if (device.CloseDevice.ClientName != null)
             {
-                Relay relay = new Relay();
-                relay.Pin = (uint)device.OpenDevice.Pin;
-                relay.Name = device.OpenDevice.Name;
-                relay.Description = device.OpenDevice.Description;
-                relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-                relay.Switch = device.OpenDevice.Switch;
-                relay.ClientName = device.Client.Name;
-                relay.SetClient(device.Client);
-                openDevice = relay;
-
-                relay = new Relay();
-                relay.Pin = (uint)device.CloseDevice.Pin;
-                relay.Name = device.CloseDevice.Name;
-                relay.Description = device.CloseDevice.Description;
-                relay.FriendlyNames = Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString());
-                relay.Switch = device.CloseDevice.Switch;
-                relay.ClientName = device.Client.Name;
-                relay.SetClient(device.Client);
-                closeDevice = relay;
+                device.CloseDevice.Client = Client.GetCreateClient(device.CloseDevice.ClientName);
             }
+            SetupTool.FromId((string)device.OpenDevice.ObjectType).Run(room, device.OpenDevice);
+            SetupTool.FromId((string)device.CloseDevice.ObjectType).Run(room, device.CloseDevice);
+            ISwitch openDevice = (ISwitch)ObjectFactory.FromString(openDeviceId);
+            ISwitch closeDevice = (ISwitch)ObjectFactory.FromString(closeDeviceId);
+            closeDevice.Stop();
+            openDevice.Stop();
+
+            foreach (Room iRoom in HomeAutomationServer.server.Rooms)
+            {
+                if (iRoom.Objects.Contains(openDevice))
+                {
+                    iRoom.Objects.Remove(openDevice);
+                }
+                if (iRoom.Objects.Contains(closeDevice))
+                {
+                    iRoom.Objects.Remove(closeDevice);
+                }
+            }
+
             Client client = device.Client;
             Blinds blinds = new Blinds(client, device.Name, openDevice, closeDevice, (int)device.TotalSteps, device.Description, Array.ConvertAll(((List<object>)device.FriendlyNames).ToArray(), x => x.ToString()));
-
             room.AddItem(blinds);
         }
     }

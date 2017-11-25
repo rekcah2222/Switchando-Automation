@@ -1,6 +1,7 @@
 ﻿using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Objects;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using System;
 using System.Collections.Generic;
@@ -9,14 +10,15 @@ namespace HomeAutomation.ObjectInterfaces
 {
     public class ObjectInterface
     {
-        public NetworkInterface Interface;
+        public string Interface;
         public string Name;
         public Type Type;
         public string Description;
 
+        public ObjectInterface() { }
         public ObjectInterface(NetworkInterface networkInterface, string name, Type type, string description)
         {
-            this.Interface = networkInterface;
+            this.Interface = networkInterface.Id;
             this.Name = name;
             this.Type = type;
             this.Description = description;
@@ -29,7 +31,7 @@ namespace HomeAutomation.ObjectInterfaces
             NetworkInterface networkInterface = obj.GetInterface();
             foreach (ObjectInterface property in HomeAutomationServer.server.ObjectNetwork.ObjectInterfaces)
             {
-                if (networkInterface == property.Interface)
+                if (networkInterface.Id.Equals(property.Interface))
                 {
                     properties.Add(property.Name);
                 }
@@ -41,7 +43,7 @@ namespace HomeAutomation.ObjectInterfaces
             List<string> properties = new List<string>();
             foreach (ObjectInterface property in HomeAutomationServer.server.ObjectNetwork.ObjectInterfaces)
             {
-                if (networkInterface.ToLower().Equals(property.Interface.Id.ToLower()))
+                if (networkInterface.ToLower().Equals(property.Interface.ToLower()))
                 {
                     properties.Add(property.Name);
                 }
@@ -57,7 +59,19 @@ namespace HomeAutomation.ObjectInterfaces
         {
             return src.GetType().GetProperty(propName).GetValue(src, null);
         }
-        public static string SendParameters(string method, string[] request)
+        public static ObjectInterface GetProperty(IObject obj, string propName)
+        {
+            NetworkInterface networkInterface = obj.GetInterface();
+            foreach (ObjectInterface property in HomeAutomationServer.server.ObjectNetwork.ObjectInterfaces)
+            {
+                if (networkInterface.Id.Equals(property.Interface))
+                {
+                    return property;
+                }
+            }
+            return null;
+        }
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("getProperties/device"))
             {
@@ -130,7 +144,8 @@ namespace HomeAutomation.ObjectInterfaces
                 if (property == null) return new ReturnStatus(CommonStatus.ERROR_BAD_REQUEST).Json();
 
                 ReturnStatus data = new ReturnStatus(CommonStatus.SUCCESS);
-                data.Object.property = GetPropertyValue(obj, property);
+                data.Object.property = GetProperty(obj, property);
+                data.Object.value = GetPropertyValue(obj, property);
                 data.Object.type = GetPropertyValue(obj, property).GetType();
                 return data.Json();
             }

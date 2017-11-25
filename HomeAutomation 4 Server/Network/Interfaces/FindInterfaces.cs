@@ -1,5 +1,6 @@
 ﻿using HomeAutomation.Objects;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace HomeAutomation.Network.Objects
             this.inter = new NetworkInterface("auto", Handler);
         }
 
-        public static string Handler(string method, string[] request)
+        public static string Handler(string method, string[] request, Identity login)
         {
             string identity = null;
             string objname = null;
@@ -106,13 +107,12 @@ namespace HomeAutomation.Network.Objects
                             break;
                     }
                 }
-                iobj.Run(forward_method, finalRequest.ToArray());
+                return iobj.Run(forward_method, finalRequest.ToArray(), login);
             }
             else
             {
-                iobj.Run(forward_method, request);
+                return iobj.Run(forward_method, request, login);
             }
-            return "";
         }
     }
 }

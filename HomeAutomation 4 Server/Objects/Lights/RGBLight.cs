@@ -3,6 +3,7 @@ using HomeAutomation.Dictionaries;
 using HomeAutomation.Network;
 using HomeAutomation.Network.APIStatus;
 using HomeAutomation.Rooms;
+using HomeAutomation.Users;
 using HomeAutomationCore;
 using HomeAutomationCore.Client;
 using System;
@@ -18,7 +19,11 @@ namespace HomeAutomation.Objects.Lights
         public string ClientName;
 
         public uint PinR, PinG, PinB;
-        public uint ValueR, ValueG, ValueB, Brightness;
+        public uint ValueR { get; set; }
+        public uint ValueG { get; set; }
+        public uint ValueB { get; set; }
+        public uint Brightness { get; set; }
+
         public bool Switch;
 
         public string Name;
@@ -34,13 +39,6 @@ namespace HomeAutomation.Objects.Lights
 
         public RGBLight()
         {
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("light_rgb")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("light_rgb", requestHandler);
             this.Semaphore = new Semaphore(0, 1);
             Semaphore.Release();
         }
@@ -77,14 +75,6 @@ namespace HomeAutomation.Objects.Lights
                 PIGPIO.set_PWM_frequency(Client.PigpioID, PinG, 4000);
                 PIGPIO.set_PWM_frequency(Client.PigpioID, PinB, 4000);
             }
-
-            foreach (NetworkInterface netInt in HomeAutomationServer.server.NetworkInterfaces)
-            {
-                if (netInt.Id.Equals("light_rgb")) return;
-            }
-            NetworkInterface.Delegate requestHandler;
-            requestHandler = SendParameters;
-            NetworkInterface networkInterface = new NetworkInterface("light_rgb", requestHandler);
         }
         public void SetClient(Client client)
         {
@@ -292,7 +282,7 @@ namespace HomeAutomation.Objects.Lights
         }
         public NetworkInterface GetInterface()
         {
-            return NetworkInterface.FromId("light_rgb");
+            return NetworkInterface.FromId(ObjectType);
         }
         private static RGBLight FindLightFromName(string name)
         {
@@ -313,7 +303,7 @@ namespace HomeAutomation.Objects.Lights
             }
             return light;
         }
-        public static string SendParameters(string method, string[] request)
+        public static string SendParameters(string method, string[] request, Identity login)
         {
             if (method.Equals("changeColor/RGB"))
             {
@@ -343,8 +333,9 @@ namespace HomeAutomation.Objects.Lights
                             dimmer = int.Parse(command[1]);
                             break;
                     }
-                    if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
+                if (!login.HasAccess(light)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 light.Set(R, G, B, dimmer);
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
@@ -371,6 +362,7 @@ namespace HomeAutomation.Objects.Lights
                     }
                     if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (!login.HasAccess(light)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 if (status) light.Start(); else light.Stop();
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
@@ -397,11 +389,13 @@ namespace HomeAutomation.Objects.Lights
                     }
                     if (light == null) return new ReturnStatus(CommonStatus.ERROR_NOT_FOUND).Json();
                 }
+                if (!login.HasAccess(light)) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 light.Dimm(dimm_percentage, dimmer);
                 return new ReturnStatus(CommonStatus.SUCCESS).Json();
             }
             if (method.Equals("create"))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 string name = null;
                 string[] friendlyNames = null;
                 string description = null;
@@ -475,6 +469,7 @@ namespace HomeAutomation.Objects.Lights
             //OLD API
             if (string.IsNullOrEmpty(method))
             {
+                if (!login.IsAdmin()) return new ReturnStatus(CommonStatus.ERROR_FORBIDDEN_REQUEST, "Insufficient permissions").Json();
                 RGBLight light = null;
                 uint R = 0;
                 uint G = 0;
@@ -563,7 +558,7 @@ namespace HomeAutomation.Objects.Lights
         }
         void UploadValues(uint ValueR, uint ValueG, uint ValueB, int DimmerIntervals)
         {
-            Client.Sendata("interface=light_rgb&objname=" + this.Name + "&R=" + ValueR.ToString() + "&G=" + ValueG.ToString() + "&B=" + ValueB.ToString() + "&dimmer=" + DimmerIntervals);
+            Client.Sendata("LIGHT_GPIO_RGB/changeColor/RGB?objname=" + this.Name + "&R=" + ValueR.ToString() + "&G=" + ValueG.ToString() + "&B=" + ValueB.ToString() + "&dimmer=" + DimmerIntervals);
         }
         public void Init()
         {
